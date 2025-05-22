@@ -12,7 +12,7 @@ struct MLPTrainerImpl : public MLPTrainer {
 
   virtual void Train() override {
 
-    const float lossThreshold = 0.01f;
+    const float lossThreshold = 0.001f;
     const int   maxEpochs     = 10'000;
     float       loss          = 0.0f;
 
