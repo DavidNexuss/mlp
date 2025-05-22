@@ -18,6 +18,10 @@ file(GLOB_RECURSE SRC
   src/*.cpp
 )
 
-add_executable(mlp ${SRC})
-target_include_directories(mlp PUBLIC src)
-target_link_libraries(mlp OpenMP::OpenMP_CXX glfw )
+add_executable(tui ${SRC} src/tui.cc)
+target_include_directories(tui PUBLIC src)
+target_link_libraries(tui OpenMP::OpenMP_CXX glfw )
+
+add_executable(cli ${SRC} src/cli.cc)
+target_include_directories(cli PUBLIC src)
+target_link_libraries(cli OpenMP::OpenMP_CXX)
