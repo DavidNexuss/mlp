@@ -43,7 +43,7 @@ void xortest() {
   }
 }
 
-void xorencoder() {
+void autoencoder() {
   OptimizerCreateInfo optInfo;
   optInfo.learningRate = 0.1f;
   optInfo.momentum     = 0.5f;
@@ -86,5 +86,5 @@ void xorencoder() {
 
 int main() {
   xortest();
-  xorencoder();
+  autoencoder();
 }

@@ -2,6 +2,7 @@
 #include <vector>
 #include "net.h"
 
+//Parameters of ONE layer of the Network
 struct OptimizerUpdateParameters {
   std::vector<std::vector<float>>& weights;
   std::vector<std::vector<float>>& gradWeights;
@@ -67,10 +68,24 @@ struct SGDMomentum : public MLPOptimizer {
   virtual ~SGDMomentum() {}
 };
 
+struct Adam : public MLPOptimizer {
+  Adam(OptimizerCreateInfo ci) {}
+
+  virtual void initialize(OptimizerInputParameters ci) override {
+  }
+
+  virtual void update(OptimizerUpdateParameters layer) override {
+  }
+
+  virtual ~Adam() {}
+};
+
+
 MLPOptimizer* mlpOptimzerCreate(OptimizerCreateInfo ci) {
   switch (ci.function) {
     default:
     case MLP_OPTIMIZER_SGD: return new SGDOptimizer(ci);
     case MLP_OPTIMIZER_SGD_MOMENTUM: return new SGDMomentum(ci);
+    case MLP_OPTIMIZER_ADAM: return new Adam(ci);
   }
 }
