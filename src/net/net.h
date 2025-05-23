@@ -1,8 +1,9 @@
 #pragma once
 #include <vector>
 #include <containers/tensor.hpp>
+#include <memory>
 
-using vector = Tensor<float>;
+using Vector = std::shared_ptr<Tensor<float>>;
 
 //Activations functions
 enum ActivationFunction {
@@ -50,14 +51,17 @@ struct OptimizerCreateInfo {
 };
 
 struct DataSet {
-  std::vector<std::vector<float>> inputs;
-  std::vector<std::vector<float>> targets;
+  std::vector<Vector> inputs;
+  std::vector<Vector> targets;
 };
 
 struct NetWork {
-  virtual void  Propagate(const vector& input, vector& output)                                = 0;
-  virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss) = 0;
-  virtual void  Backpropagate(const vector& input, const vector& target, LossFunction loss)   = 0;
-  virtual void  TrainStep(const vector& input, const vector& target, LossFunction loss)       = 0;
-  virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                    = 0;
+  virtual Vector Propagate(Vector input)                                         = 0;
+  virtual float  ComputeLoss(Vector predicted, Vector target, LossFunction loss) = 0;
+  virtual void   Backpropagate(Vector input, Vector target, LossFunction loss)   = 0;
+  virtual void   TrainStep(Vector input, Vector target, LossFunction loss)       = 0;
+  virtual void   SetOptimizer(const OptimizerCreateInfo ci)                      = 0;
+
+
+  inline Vector operator*(Vector x) { return Propagate(x); }
 };

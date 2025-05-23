@@ -1,4 +1,5 @@
 #include "net.h"
+#include "trainer.hpp"
 #include <iostream>
 
 const char* lossFunctionToString(LossFunction f) {
@@ -17,7 +18,7 @@ void MLPTrainerCreateInfo::print() {
 }
 
 struct MLPTrainerImpl : public MLPTrainer {
-  std::shared_ptr<MLP>     net;
+  std::shared_ptr<NetWork> net;
   std::shared_ptr<DataSet> ds;
 
   MLPTrainerImpl(MLPTrainerCreateInfo ci) :
@@ -27,7 +28,7 @@ struct MLPTrainerImpl : public MLPTrainer {
 
   virtual void SetDataset(std::shared_ptr<DataSet> ds) override { this->ds = ds; }
 
-  virtual void SetNetwork(std::shared_ptr<MLP> net) override { this->net = net; }
+  virtual void SetNetwork(std::shared_ptr<NetWork> net) override { this->net = net; }
 
   virtual void Train() override {
 
@@ -38,10 +39,12 @@ struct MLPTrainerImpl : public MLPTrainer {
       for (size_t i = 0; i < ds->inputs.size(); ++i) {
         net->TrainStep(ds->inputs[i], ds->targets[i], lossFunction);
 
-        std::vector<float> output;
-        net->Propagate(ds->inputs[i], output);
-        for (size_t j = 0; j < output.size(); ++j) {
-          float diff = output[j] - ds->targets[i][j];
+        Vector output = net->Propagate(ds->inputs[i]);
+
+        auto& target = *ds->targets[i];
+
+        for (size_t j = 0; j < output->size(); ++j) {
+          float diff = output->at(j) - target[j];
           loss += 0.5f * diff * diff;
         }
       }

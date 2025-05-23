@@ -1,5 +1,5 @@
 #pragma once
-#include <containers/tensor.hpp>
+#include "net.h"
 
 struct ivec {
   int x, y, z;
@@ -18,7 +18,6 @@ struct CNNCreateInfo {
   ivec outputSize;
 };
 
-struct CNN {
-  virtual void AddLayer(CNNLayerCreateInfo ci)                        = 0;
-  virtual void Propagate(Tensor<float>& input, Tensor<float>& output) = 0;
+struct CNN : public NetWork {
+  virtual void AddLayer(CNNLayerCreateInfo ci) = 0;
 };

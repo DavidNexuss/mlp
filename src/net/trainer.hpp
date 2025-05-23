@@ -1,5 +1,5 @@
-#include "mlp.hpp"
 #include <memory>
+#include "net.h"
 
 struct MLPTrainerCreateInfo {
   LossFunction lossFunction  = MLP_LOSS_MSE;
@@ -13,10 +13,10 @@ struct MLPTrainer : public MLPTrainerCreateInfo {
   MLPTrainer(MLPTrainerCreateInfo ci) :
     MLPTrainerCreateInfo(ci) {}
 
-  virtual void SetLossFunction(LossFunction func)      = 0;
-  virtual void SetNetwork(std::shared_ptr<MLP> mlp)    = 0;
-  virtual void SetDataset(std::shared_ptr<DataSet> ds) = 0;
-  virtual void Train()                                 = 0;
+  virtual void SetLossFunction(LossFunction func)       = 0;
+  virtual void SetNetwork(std::shared_ptr<NetWork> mlp) = 0;
+  virtual void SetDataset(std::shared_ptr<DataSet> ds)  = 0;
+  virtual void Train()                                  = 0;
   virtual ~MLPTrainer() {};
 };
 
