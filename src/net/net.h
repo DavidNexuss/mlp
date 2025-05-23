@@ -17,6 +17,14 @@ enum ActivationFunction {
   MLP_ACTIVATION_SOFTMAX
 };
 
+enum InitializationStrategy {
+  MLP_INITIALIZE_NONE,
+  MLP_INITIALIZE_RANDOM,
+  MLP_INITIALIZE_xAVIER,
+  MLP_INITIALIZE_HE,
+  MLP_INITIALIZE_AUTO
+};
+
 
 // Loss functions
 enum LossFunction {
@@ -36,10 +44,6 @@ struct OptimizerCreateInfo {
   float             learningRate;
   OptimizerFunction function;
 
-  int              inputSize;
-  int              outputSize;
-  std::vector<int> hiddenSizes;
-
   //Hyper parameters
   float momentum = 0.9f;
 };
@@ -56,13 +60,14 @@ struct MLPCreateInfo {
 typedef struct MLP MLP;
 
 struct MLP {
-  virtual void  AddLayer(int neurons, ActivationFunction function)                            = 0;
-  virtual void  Propagate(const vector& input, vector& output)                                = 0;
-  virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss) = 0;
-  virtual void  Backpropagate(const vector& input, const vector& target, LossFunction loss)   = 0;
-  virtual void  TrainStep(const vector& input, const vector& target, LossFunction loss)       = 0;
-  virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                    = 0;
-  virtual void  Randomize()                                                                   = 0;
+  virtual void  AddLayer(int neurons, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE) = 0;
+  virtual void  Propagate(const vector& input, vector& output)                                                            = 0;
+  virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss)                             = 0;
+  virtual void  Backpropagate(const vector& input, const vector& target, LossFunction loss)                               = 0;
+  virtual void  TrainStep(const vector& input, const vector& target, LossFunction loss)                                   = 0;
+  virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                                                = 0;
+  virtual void  InitializeLayer(InitializationStrategy strategy, int layerIndex)                                          = 0;
+  virtual void  Initialize(InitializationStrategy strategy)                                                               = 0;
   virtual ~MLP() {}
 };
 
@@ -76,6 +81,7 @@ struct DataSet {
 
 ///MLP Trainer
 struct MLPTrainer {
+  virtual void SetLossFunction(LossFunction func)      = 0;
   virtual void SetNetwork(std::shared_ptr<MLP> mlp)    = 0;
   virtual void SetDataset(std::shared_ptr<DataSet> ds) = 0;
   virtual void Train()                                 = 0;

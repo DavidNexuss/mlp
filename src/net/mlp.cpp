@@ -58,17 +58,20 @@ struct MLPImpl : public MLP {
   LossFunction       loss = MLP_LOSS_MSE;
 
   //optimizer
-  std::unique_ptr<MLPOptimizer>   optimizer;
-  std::vector<std::vector<float>> layerOutputs;
-  std::vector<std::vector<float>> layerDeltas;
+  OptimizerCreateInfo                        optimizerCreateInfo;
+  std::vector<std::unique_ptr<MLPOptimizer>> optimizer;
+  std::vector<std::vector<float>>            layerOutputs;
+  std::vector<std::vector<float>>            layerDeltas;
 
   MLPImpl(int inputLayerSize) {
     this->inputLayerSize = inputLayerSize;
   }
 
-  virtual void AddLayer(int neurons, ActivationFunction function) override {
+  virtual void AddLayer(int neurons, ActivationFunction function, InitializationStrategy init) override {
     int lastLayerSize = layers.size() ? layers.back().outputSize() : inputLayerSize;
     layers.emplace_back(lastLayerSize, neurons, function);
+    if (init != MLP_INITIALIZE_NONE)
+      InitializeLayer(init, layers.size() - 1);
   }
 
   virtual void Propagate(const vector& input, vector& output) override {
@@ -133,7 +136,6 @@ struct MLPImpl : public MLP {
         }
       }
 
-      // Compute delta for next layer
       if (l > 0) {
         auto& nextDelta = layerDeltas[l - 1];
         nextDelta.resize(inputSize, 0.0f);
@@ -153,26 +155,79 @@ struct MLPImpl : public MLP {
     Propagate(input, output);
     Backpropagate(input, target, loss);
 
+    if (optimizer.size() != layers.size()) {
+      optimizer.clear();
+      for (int i = 0; i < layers.size(); i++) {
+        optimizer.push_back(std::unique_ptr<MLPOptimizer>(mlpOptimzerCreate(optimizerCreateInfo)));
+
+        OptimizerInputParameters input;
+        input.inputNeurons  = layers[i].inputSize();
+        input.outputNeurons = layers[i].outputSize();
+
+        optimizer.back()->initialize(input);
+      }
+    }
     for (int i = 0; i < layers.size(); ++i) {
-      OptimizerParameters params = {
+      OptimizerUpdateParameters params = {
         layers[i].weights,
         layers[i].gradWeigths,
         layers[i].bias,
         layers[i].gradBias};
-      optimizer->update(params);
+      optimizer[i]->update(params);
     }
   }
   virtual void SetOptimizer(const OptimizerCreateInfo ci) override {
-    this->optimizer.reset(mlpOptimzerCreate(ci));
-    this->optimizer->initialize(ci);
+    this->optimizerCreateInfo = ci;
   }
-  virtual void Randomize() override {
-    for (auto& layer : layers) {
-      for (auto& row : layer.weights)
-        for (float& w : row)
-          w = ((float)rand() / RAND_MAX - 0.5f) * 2.0f; // Range: [-1, 1]
+
+  void InitializeRandomize(int index) {
+    auto& layer = layers[index];
+    for (auto& row : layer.weights)
+      for (float& w : row)
+        w = ((float)rand() / RAND_MAX - 0.5f) * 2.0f; // Range: [-1, 1]
+  }
+
+  void InitializeXavier(int index) {
+    auto&  layer   = layers[index];
+    size_t fan_in  = layer.weights[0].size(); // Inputs to each neuron
+    size_t fan_out = layer.weights.size();    // Number of neurons in this layer
+
+    float limit = sqrt(6.0f / (fan_in + fan_out));
+
+    for (auto& row : layer.weights)
+      for (float& w : row)
+        w = ((float)rand() / RAND_MAX) * 2.0f * limit - limit; // Range: [-limit, limit]
+  }
+  void InitializeHe(int index) {
+    auto&  layer  = layers[index];
+    size_t fan_in = layer.weights[0].size(); // Inputs to each neuron
+
+    float stddev = sqrt(2.0f / fan_in);
+    float limit  = sqrt(6.0f / fan_in);
+
+    for (auto& row : layer.weights) {
+      for (float& w : row) {
+        w = ((float)rand() / RAND_MAX) * 2.0f * limit - limit;
+      }
     }
   }
+
+  void InitializeLayer(InitializationStrategy strategy, int index) override {
+    switch (strategy) {
+      case MLP_INITIALIZE_xAVIER: InitializeXavier(index); break;
+      case MLP_INITIALIZE_RANDOM: InitializeRandomize(index); break;
+      case MLP_INITIALIZE_HE: InitializeHe(index); break;
+      default:
+      case MLP_INITIALIZE_NONE: break;
+    }
+  }
+
+  void Initialize(InitializationStrategy strategy) override {
+    for (int i = 0; i < layers.size(); i++) {
+      InitializeLayer(strategy, i);
+    }
+  }
+
   virtual ~MLPImpl() {}
 };
 
