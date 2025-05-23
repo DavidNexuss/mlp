@@ -6,6 +6,7 @@
 #include "activation.hpp"
 #include "optimizer.hpp"
 #include "loss.hpp"
+#include "mlp.hpp"
 
 struct Layer {
   //Layer information

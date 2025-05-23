@@ -8,6 +8,7 @@ void xortest() {
   optInfo.learningRate = 0.1f;
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+  optInfo.print();
 
   std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(2));
   net->AddLayer(4, MLP_ACTIVATION_RELU);
@@ -34,6 +35,7 @@ void xortest() {
   trainer->SetLossFunction(MLP_LOSS_MSE);
   trainer->SetDataset(ds);
   trainer->SetNetwork(net);
+  trainer->print();
   trainer->Train();
 
 
@@ -52,6 +54,8 @@ void autoencoder() {
   optInfo.learningRate = 0.1f;
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+  optInfo.l2lambda     = 0.0005f;
+  optInfo.print();
 
   std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(2));
 
@@ -79,6 +83,8 @@ void autoencoder() {
   trainer->SetLossFunction(MLP_LOSS_MSE);
   trainer->SetDataset(ds);
   trainer->SetNetwork(net);
+  trainer->print();
+
   trainer->Train();
 
 
