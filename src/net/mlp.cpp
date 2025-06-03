@@ -27,6 +27,95 @@ struct Layer {
   virtual ~Layer() = default;
 };
 
+struct MaxPoolingLayer : public Layer {
+  int inputChannels;
+  int inputWidth;
+  int inputHeight;
+
+  int kernelSize;
+  int stride;
+
+  MaxPoolingLayer(int inChannels, int inWidth, int inHeight, int kSize, int stride) :
+    inputChannels(inChannels), inputWidth(inWidth), inputHeight(inHeight), kernelSize(kSize), stride(stride) {}
+
+  inline int outputWidth() const {
+    return (inputWidth - kernelSize) / stride + 1;
+  }
+
+  inline int outputHeight() const {
+    return (inputHeight - kernelSize) / stride + 1;
+  }
+
+  void propagate(const std::vector<float>& input, std::vector<float>& output) override {
+    int ow = outputWidth();
+    int oh = outputHeight();
+    output.resize(inputChannels * ow * oh);
+
+#pragma omp parallel for collapse(3)
+    for (int c = 0; c < inputChannels; ++c) {
+      for (int oy = 0; oy < oh; ++oy) {
+        for (int ox = 0; ox < ow; ++ox) {
+          float maxVal = -std::numeric_limits<float>::infinity();
+
+          for (int ky = 0; ky < kernelSize; ++ky) {
+            for (int kx = 0; kx < kernelSize; ++kx) {
+              int ix = ox * stride + kx;
+              int iy = oy * stride + ky;
+
+              int inputIndex = c * inputWidth * inputHeight + iy * inputWidth + ix;
+              maxVal         = std::max(maxVal, input[inputIndex]);
+            }
+          }
+
+          int outIndex     = c * ow * oh + oy * ow + ox;
+          output[outIndex] = maxVal;
+        }
+      }
+    }
+  }
+  void backpropagate(const std::vector<float>& input,
+                     const std::vector<float>& output,
+                     const std::vector<float>& delta,
+                     std::vector<float>&       prevDelta) override {
+    int ow = outputWidth();
+    int oh = outputHeight();
+
+    prevDelta.resize(inputChannels * inputWidth * inputHeight, 0.0f);
+
+#pragma omp parallel for collapse(3)
+    for (int c = 0; c < inputChannels; ++c) {
+      for (int oy = 0; oy < oh; ++oy) {
+        for (int ox = 0; ox < ow; ++ox) {
+          float maxVal   = -std::numeric_limits<float>::infinity();
+          int   maxIndex = -1;
+
+          // Find max element index in input window corresponding to this output position
+          for (int ky = 0; ky < kernelSize; ++ky) {
+            for (int kx = 0; kx < kernelSize; ++kx) {
+              int ix = ox * stride + kx;
+              int iy = oy * stride + ky;
+
+              int inputIndex = c * inputWidth * inputHeight + iy * inputWidth + ix;
+
+              float val = input[inputIndex];
+              if (val > maxVal) {
+                maxVal   = val;
+                maxIndex = inputIndex;
+              }
+            }
+          }
+
+          int outIndex = c * ow * oh + oy * ow + ox;
+
+          // Propagate delta only through the max input element
+#pragma omp atomic
+          prevDelta[maxIndex] += delta[outIndex];
+        }
+      }
+    }
+  }
+};
+
 
 struct ConvolutionalLayer : public Layer {
   int inputChannels;
