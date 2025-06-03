@@ -340,8 +340,12 @@ struct MLPImpl : public MLP {
       InitializeLayer(init, layers.size() - 1);
   }
 
-  void AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE) override {
-    //TOOD: Implement
+  void AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy) override {
+    layers.push_back(std::make_shared<ConvolutionalLayer>(inputChannels, inputWidth, inputHeight, outputChannels, kernelSize, stride, padding, function));
+
+    if (strategy != MLP_INITIALIZE_NONE) {
+      InitializeLayer(strategy, layers.size() - 1);
+    }
   }
 
   void Propagate(const vector& input, vector& output) override {
