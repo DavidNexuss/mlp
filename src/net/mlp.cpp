@@ -18,10 +18,13 @@ struct Layer {
   std::vector<std::vector<float>> gradWeigths;
   std::vector<float>              gradBias;
 
-  virtual void propagate(const std::vector<float>& input, std::vector<float>& output) = 0;
+  virtual void propagate(const std::vector<float>& input, std::vector<float>& output)                                                                           = 0;
+  virtual void backpropagate(const std::vector<float>& input, const std::vector<float>& output, const std::vector<float>& delta, std::vector<float>& prevDelta) = 0;
 
   virtual int inputSize() { return weights[0].size(); }
   virtual int outputSize() { return weights.size(); }
+
+  virtual ~Layer() = default;
 };
 
 
@@ -99,6 +102,60 @@ struct ConvolutionalLayer : public Layer {
       softmax(output); // Applied across spatially flattened output
     }
   }
+
+  void backpropagate(const std::vector<float>& input, const std::vector<float>& output, const std::vector<float>& delta, std::vector<float>& prevDelta) override {
+    int iw = inputWidth;
+    int ih = inputHeight;
+    int ow = outputWidth();
+    int oh = outputHeight();
+
+    int kernelArea = inputChannels * kernelSize * kernelSize;
+
+    for (auto& gw : gradWeigths) std::fill(gw.begin(), gw.end(), 0.0f);
+    std::fill(gradBias.begin(), gradBias.end(), 0.0f);
+
+    prevDelta.resize(input.size(), 0.0f); // Gradient w.r.t. input
+
+#pragma omp parallel for collapse(3)
+    for (int oc = 0; oc < outputChannels; ++oc) {
+      for (int oy = 0; oy < oh; ++oy) {
+        for (int ox = 0; ox < ow; ++ox) {
+          int   outIdx   = oc * ow * oh + oy * ow + ox;
+          float act      = output[outIdx];
+          float dAct     = activation_derivative(activationFunction, act);
+          float deltaVal = delta[outIdx] * dAct;
+
+          gradBias[oc] += deltaVal;
+
+          int wIndex = 0;
+
+          for (int ic = 0; ic < inputChannels; ++ic) {
+            for (int ky = 0; ky < kernelSize; ++ky) {
+              for (int kx = 0; kx < kernelSize; ++kx) {
+                int ix = ox * stride + kx - padding;
+                int iy = oy * stride + ky - padding;
+
+                if (ix >= 0 && ix < iw && iy >= 0 && iy < ih) {
+                  int   inIdx = ic * iw * ih + iy * iw + ix;
+                  float inVal = input[inIdx];
+
+                  // Accumulate weight gradient
+#pragma omp atomic
+                  gradWeigths[oc][wIndex] += deltaVal * inVal;
+
+                  // Accumulate input gradient
+#pragma omp atomic
+                  prevDelta[inIdx] += weights[oc][wIndex] * deltaVal;
+                }
+
+                ++wIndex;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 };
 
 struct DenseLayer : public Layer {
@@ -134,6 +191,45 @@ struct DenseLayer : public Layer {
       }
     }
   }
+
+  void backpropagate(const std::vector<float>& input, const std::vector<float>& output, const std::vector<float>& delta, std::vector<float>& prevDelta) override {
+    int inSize  = input.size();
+    int outSize = output.size();
+
+    // Initialize gradients
+    if (gradWeigths.size() != outSize || gradWeigths[0].size() != inSize) {
+      gradWeigths.resize(outSize, std::vector<float>(inSize, 0.0f));
+    } else {
+      for (auto& row : gradWeigths) std::fill(row.begin(), row.end(), 0.0f);
+    }
+
+    if (gradBias.size() != outSize) {
+      gradBias.resize(outSize, 0.0f);
+    } else {
+      std::fill(gradBias.begin(), gradBias.end(), 0.0f);
+    }
+
+    prevDelta.resize(inSize, 0.0f);
+
+#pragma omp parallel for
+    for (int i = 0; i < outSize; ++i) {
+      // Derivative of activation
+      float dAct = activation_derivative(activationFunction, output[i]);
+      float dVal = delta[i] * dAct;
+
+      gradBias[i] += dVal;
+
+      for (int j = 0; j < inSize; ++j) {
+        float inVal = input[j];
+
+#pragma omp atomic
+        gradWeigths[i][j] += dVal * inVal;
+
+#pragma omp atomic
+        prevDelta[j] += weights[i][j] * dVal;
+      }
+    }
+  }
 };
 struct MLPImpl : public MLP {
   std::vector<std::shared_ptr<Layer>> layers;
@@ -143,25 +239,25 @@ struct MLPImpl : public MLP {
   //optimizer
   OptimizerCreateInfo                        optimizerCreateInfo;
   std::vector<std::unique_ptr<MLPOptimizer>> optimizer;
-  std::vector<std::vector<float>>            layerOutputs;
-  std::vector<std::vector<float>>            layerDeltas;
 
   MLPImpl(int inputLayerSize) {
     this->inputLayerSize = inputLayerSize;
   }
 
-  virtual void AddLayer(int neurons, ActivationFunction function, InitializationStrategy init) override {
+  void AddLayer(int neurons, ActivationFunction function, InitializationStrategy init) override {
     int lastLayerSize = layers.size() ? layers.back()->outputSize() : inputLayerSize;
     layers.push_back(std::shared_ptr<Layer>(new DenseLayer(lastLayerSize, neurons, function)));
     if (init != MLP_INITIALIZE_NONE)
       InitializeLayer(init, layers.size() - 1);
   }
 
-  virtual void Propagate(const vector& input, vector& output) override {
+  void AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE) override {
+    //TOOD: Implement
+  }
+
+  void Propagate(const vector& input, vector& output) override {
     std::vector<float> swapbuffers[2];
     output.clear();
-    layerOutputs.clear();
-    layerOutputs.push_back(input);
 
     for (int i = 0; i < layers.size(); i++) {
       const std::vector<float>& pinput  = i == 0 ? input : swapbuffers[0];
@@ -169,67 +265,44 @@ struct MLPImpl : public MLP {
 
       layers[i]->propagate(pinput, poutput);
       std::swap(swapbuffers[1], swapbuffers[0]);
-      layerOutputs.push_back(swapbuffers[0]);
     }
 
     std::swap(output, swapbuffers[0]);
   }
 
-  virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss) override {
+  float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss) override {
     return ::computeLoss(predicted, target, loss);
   }
 
   void Backpropagate(const std::vector<float>& input, const std::vector<float>& target, LossFunction loss) override {
-    layerOutputs.resize(layers.size());
-    layerDeltas.resize(layers.size());
 
-    std::vector<float> inputBuffer = input;
-    for (int i = 0; i < layers.size(); ++i) {
-      layers[i]->propagate(inputBuffer, layerOutputs[i]);
-      inputBuffer = layerOutputs[i];
+    static std::vector<float> dummyDeltaBuffer;
+
+    std::vector<std::vector<float>> layerOutputs(layers.size());
+    std::vector<std::vector<float>> layerDeltas(layers.size());
+
+    // Forward pass
+    std::vector<float> buffer = input;
+    for (size_t i = 0; i < layers.size(); ++i) {
+      layers[i]->propagate(buffer, layerOutputs[i]);
+      buffer = layerOutputs[i];
     }
 
     // Compute loss gradient (dL/dy)
-    std::vector<float> delta = ::computeLossDerivative(layerOutputs.back(), target, loss);
-    layerDeltas.back()       = delta;
+    layerDeltas.back() = ::computeLossDerivative(layerOutputs.back(), target, loss);
 
-    // Backpropagate errors
-    for (int l = layers.size() - 1; l >= 0; --l) {
-      auto& layer  = layers[l];
-      auto& output = layerOutputs[l];
-      auto& gradW  = layer->gradWeigths;
-      auto& gradB  = layer->gradBias;
-
-      int                       inputSize  = l == 0 ? input.size() : layerOutputs[l - 1].size();
+    // Backward pass
+    for (int l = static_cast<int>(layers.size()) - 1; l >= 0; --l) {
       const std::vector<float>& prevOutput = (l == 0) ? input : layerOutputs[l - 1];
-      const std::vector<float>& deltaCurr  = layerDeltas[l];
+      const std::vector<float>& output     = layerOutputs[l];
+      const std::vector<float>& delta      = layerDeltas[l];
 
-      gradW.resize(layer->outputSize(), std::vector<float>(inputSize, 0.0f));
-      gradB.resize(layer->outputSize(), 0.0f);
-
-      // Compute gradients
-      for (int i = 0; i < layer->outputSize(); ++i) {
-        float dOut     = deltaCurr[i];
-        float actDeriv = activation_derivative(layer->activationFunction, output[i]);
-
-        gradB[i] = dOut * actDeriv;
-
-        for (int j = 0; j < inputSize; ++j) {
-          gradW[i][j] = prevOutput[j] * gradB[i];
-        }
-      }
-
+      // Prepare previous delta container
       if (l > 0) {
-        auto& nextDelta = layerDeltas[l - 1];
-        nextDelta.resize(inputSize, 0.0f);
-        for (int j = 0; j < inputSize; ++j) {
-          float sum = 0.0f;
-          for (int i = 0; i < layer->outputSize(); ++i) {
-            sum += layer->weights[i][j] * gradB[i];
-          }
-          nextDelta[j] = sum;
-        }
+        layerDeltas[l - 1].resize(prevOutput.size(), 0.0f);
       }
+
+      layers[l]->backpropagate(prevOutput, output, delta, (l > 0 ? layerDeltas[l - 1] : dummyDeltaBuffer));
     }
   }
 
@@ -259,7 +332,8 @@ struct MLPImpl : public MLP {
       optimizer[i]->update(params);
     }
   }
-  virtual void SetOptimizer(const OptimizerCreateInfo ci) override {
+
+  void SetOptimizer(const OptimizerCreateInfo ci) override {
     this->optimizerCreateInfo = ci;
   }
 
