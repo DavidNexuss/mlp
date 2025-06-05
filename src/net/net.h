@@ -56,18 +56,37 @@ struct MLPCreateInfo {
   std::vector<ActivationFunction> activations;
 };
 
+struct DenseLayerCreateInfo {
+  int                    neurons;
+  ActivationFunction     function;
+  InitializationStrategy initialization;
+};
+
+struct ConvolutionalLayerCreateInfo {
+  int                    inputChannels;
+  int                    inputWidth;
+  int                    inputHeight;
+  int                    outputChannels;
+  int                    kernelSize;
+  int                    stride;
+  int                    padding;
+  ActivationFunction     activation;
+  InitializationStrategy initialization;
+};
+
 // MLP
 typedef struct MLP MLP;
 
 struct MLP {
-  virtual void  AddLayer(int neurons, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE) = 0;
-  virtual void  Propagate(const vector& input, vector& output)                                                            = 0;
-  virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss)                             = 0;
-  virtual void  Backpropagate(const vector& input, const vector& target, LossFunction loss)                               = 0;
-  virtual void  TrainStep(const vector& input, const vector& target, LossFunction loss)                                   = 0;
-  virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                                                = 0;
-  virtual void  InitializeLayer(InitializationStrategy strategy, int layerIndex)                                          = 0;
-  virtual void  Initialize(InitializationStrategy strategy)                                                               = 0;
+  virtual void  AddLayer(int neurons, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE)                                                                                                                  = 0;
+  virtual void  AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE) = 0;
+  virtual void  Propagate(const vector& input, vector& output)                                                                                                                                                                             = 0;
+  virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss)                                                                                                                                              = 0;
+  virtual void  Backpropagate(const vector& input, const vector& target, LossFunction loss)                                                                                                                                                = 0;
+  virtual void  TrainStep(const vector& input, const vector& target, LossFunction loss)                                                                                                                                                    = 0;
+  virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                                                                                                                                                                 = 0;
+  virtual void  InitializeLayer(InitializationStrategy strategy, int layerIndex)                                                                                                                                                           = 0;
+  virtual void  Initialize(InitializationStrategy strategy)                                                                                                                                                                                = 0;
   virtual ~MLP() {}
 };
 
