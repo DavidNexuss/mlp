@@ -130,11 +130,12 @@ std::shared_ptr<MLP> createMNISTDeepMLP() {
   return net;
 }
 
-void train(std::shared_ptr<DataSet> ds, std::shared_ptr<MLP> mlp) {
+void train(std::shared_ptr<DataSet> ds, std::shared_ptr<DataSet> test, std::shared_ptr<MLP> mlp) {
 
   std::unique_ptr<MLPTrainer> trainer = std::unique_ptr<MLPTrainer>(mlpTrainerCreate());
   trainer->SetLossFunction(MLP_LOSS_MSE);
   trainer->SetDataset(ds);
+  trainer->SetTestDataset(test);
   trainer->SetNetwork(mlp);
   trainer->Train();
 
@@ -145,14 +146,13 @@ void mnistclassifier() {
 
   printf("================[MNIST TEST]========================\n");
 
-  std::string basepath = "assets/MNIST Dataset JPG format/MNIST - JPG - training/";
-
-  std::shared_ptr<DataSet> ds = createStorageDataSet(basepath);
+  std::shared_ptr<DataSet> ds   = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - training/");
+  std::shared_ptr<DataSet> test = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - testing/");
 
   printf("====(DNN)===\n");
-  train(ds, createMNISTDeepMLP());
+  train(ds, test, createMNISTDeepMLP());
   printf("====(CNN)===\n");
-  train(ds, createMNISTCNN());
+  train(ds, test, createMNISTCNN());
 }
 
 int main() {
