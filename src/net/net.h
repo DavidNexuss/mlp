@@ -93,10 +93,32 @@ struct MLP {
 MLP* mlpCreate(int inputLayerSize);
 MLP* mlpCreate(MLPCreateInfo ci);
 
+struct IDataSet {
+  virtual const std::vector<float>& getInput(int index)  = 0;
+  virtual const std::vector<float>& getOutput(int index) = 0;
+};
+
 struct DataSet {
+  virtual std::vector<float>& getInput(int index)  = 0;
+  virtual std::vector<float>& getOutput(int index) = 0;
+
+  virtual int getInputCount()  = 0;
+  virtual int getOutputCount() = 0;
+};
+
+struct ManualDataSet : public DataSet {
   std::vector<std::vector<float>> inputs;
   std::vector<std::vector<float>> targets;
+
+  inline std::vector<float>& getInput(int index) override { return inputs[index]; }
+  inline std::vector<float>& getOutput(int index) override { return targets[index]; }
+
+  inline int getInputCount() override { return inputs.size(); }
+  inline int getOutputCount() override { return targets.size(); }
 };
+
+
+std::shared_ptr<DataSet> createStorageDataSet(const std::string& filepath);
 
 ///MLP Trainer
 struct MLPTrainer {

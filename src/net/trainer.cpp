@@ -1,4 +1,5 @@
 #include "net.h"
+#include <util/stdout.hpp>
 #include <iostream>
 
 struct MLPTrainerImpl : public MLPTrainer {
@@ -20,20 +21,20 @@ struct MLPTrainerImpl : public MLPTrainer {
 
     for (int epoch = 0; epoch < maxEpochs; ++epoch) {
       loss = 0.0f;
-      for (size_t i = 0; i < ds->inputs.size(); ++i) {
-        net->TrainStep(ds->inputs[i], ds->targets[i], lossFunction);
+      for (size_t i = 0; i < ds->getInputCount(); ++i) {
+        net->TrainStep(ds->getInput(i), ds->getOutput(i), lossFunction);
 
         std::vector<float> output;
-        net->Propagate(ds->inputs[i], output);
+        net->Propagate(ds->getInput(i), output);
         for (size_t j = 0; j < output.size(); ++j) {
-          float diff = output[j] - ds->targets[i][j];
+          float diff = output[j] - ds->getOutput(i)[j];
           loss += 0.5f * diff * diff;
         }
       }
 
-      loss /= ds->inputs.size();
+      loss /= ds->getInputCount();
 
-      if (epoch % 500 == 0 || loss < lossThreshold) {
+      if (epoch % 10 == 0 || loss < lossThreshold) {
         std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
       }
 

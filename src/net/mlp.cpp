@@ -7,6 +7,7 @@
 #include "optimizer.hpp"
 #include "loss.hpp"
 #include <memory>
+#include <omp.h>
 
 struct Layer {
   //Layer information
@@ -259,28 +260,25 @@ struct DenseLayer : public Layer {
     output.resize(outputSize());
 
 #pragma omp parallel for
-    for (int i = 0; i < output.size(); i++) {
+    for (int i = 0; i < (int)output.size(); i++) {
       float accum = bias[i];
-
-#pragma omp simd reduction(+ : accum)
-      for (int j = 0; j < input.size(); j++) {
+      for (int j = 0; j < (int)input.size(); j++) {
         accum += input[j] * weights[i][j];
       }
-
       output[i] = accum;
     }
 
     if (activationFunction == MLP_ACTIVATION_SOFTMAX) {
+      // softmax typically involves a reduction and normalization across all outputs
+      // it is better to keep it serial or implement a parallel version carefully
       softmax(output);
     } else {
-
-#pragma omp simd
-      for (int i = 0; i < output.size(); i++) {
+#pragma omp parallel for
+      for (int i = 0; i < (int)output.size(); i++) {
         output[i] = activate(activationFunction, output[i]);
       }
     }
   }
-
   void backpropagate(const std::vector<float>& input, const std::vector<float>& output, const std::vector<float>& delta, std::vector<float>& prevDelta) override {
     int inSize  = input.size();
     int outSize = output.size();
@@ -298,24 +296,37 @@ struct DenseLayer : public Layer {
       std::fill(gradBias.begin(), gradBias.end(), 0.0f);
     }
 
-    prevDelta.resize(inSize, 0.0f);
+    prevDelta.assign(inSize, 0.0f);
 
-#pragma omp parallel for
-    for (int i = 0; i < outSize; ++i) {
-      // Derivative of activation
-      float dAct = activation_derivative(activationFunction, output[i]);
-      float dVal = delta[i] * dAct;
+    // Create thread-local buffer for prevDelta to avoid race condition
+    std::vector<std::vector<float>> threadPrevDelta(omp_get_max_threads(), std::vector<float>(inSize, 0.0f));
 
-      gradBias[i] += dVal;
+#pragma omp parallel
+    {
+      int                 tid            = omp_get_thread_num();
+      std::vector<float>& localPrevDelta = threadPrevDelta[tid];
 
+#pragma omp for
+      for (int i = 0; i < outSize; ++i) {
+        float dAct = activation_derivative(activationFunction, output[i]);
+        float dVal = delta[i] * dAct;
+
+        gradBias[i] += dVal;
+
+        for (int j = 0; j < inSize; ++j) {
+          float inVal = input[j];
+
+          gradWeigths[i][j] += dVal * inVal;
+
+          localPrevDelta[j] += weights[i][j] * dVal;
+        }
+      }
+    }
+
+    // Reduce thread-local prevDelta into global prevDelta
+    for (int tid = 0; tid < (int)threadPrevDelta.size(); ++tid) {
       for (int j = 0; j < inSize; ++j) {
-        float inVal = input[j];
-
-#pragma omp atomic
-        gradWeigths[i][j] += dVal * inVal;
-
-#pragma omp atomic
-        prevDelta[j] += weights[i][j] * dVal;
+        prevDelta[j] += threadPrevDelta[tid][j];
       }
     }
   }
