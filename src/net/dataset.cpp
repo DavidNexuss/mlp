@@ -14,12 +14,6 @@
 #  define MMAP_READ
 #endif
 
-#if defined(MMAP_READ)
-#  pragma message(">>> [BUILD LOG] Compiling with mmap support")
-#elif defined(_WIN32)
-#  pragma message(">>> [BUILD LOG] Compiling without mmap support")
-#endif
-
 #ifdef MMAP_READ
 #  include <sys/mman.h>
 #  include <fcntl.h>

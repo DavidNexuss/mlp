@@ -97,7 +97,7 @@ std::shared_ptr<MLP> createMNISTCNN() {
   net->AddLayer(10, MLP_ACTIVATION_SIGMOID);
 
   OptimizerCreateInfo optInfo;
-  optInfo.learningRate = 0.005f;
+  optInfo.learningRate = 0.05f;
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
   net->SetOptimizer(optInfo);
