@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <random>
 
 //Basics
 
@@ -93,28 +94,44 @@ struct MLP {
 MLP* mlpCreate(int inputLayerSize);
 MLP* mlpCreate(MLPCreateInfo ci);
 
-struct IDataSet {
+struct DataSet {
   virtual const std::vector<float>& getInput(int index)  = 0;
   virtual const std::vector<float>& getOutput(int index) = 0;
+  virtual int                       getInputCount()      = 0;
+  virtual int                       getOutputCount()     = 0;
 };
 
-struct DataSet {
-  virtual std::vector<float>& getInput(int index)  = 0;
-  virtual std::vector<float>& getOutput(int index) = 0;
-
-  virtual int getInputCount()  = 0;
-  virtual int getOutputCount() = 0;
-};
-
-struct ManualDataSet : public DataSet {
-  std::vector<std::vector<float>> inputs;
-  std::vector<std::vector<float>> targets;
-
-  inline std::vector<float>& getInput(int index) override { return inputs[index]; }
-  inline std::vector<float>& getOutput(int index) override { return targets[index]; }
+template <typename T, typename V>
+struct DataSetStorage : public DataSet {
+  std::vector<T> inputs;
+  std::vector<V> targets;
 
   inline int getInputCount() override { return inputs.size(); }
   inline int getOutputCount() override { return targets.size(); }
+
+  inline void trim(int size) {
+    inputs.resize(size);
+    targets.resize(size);
+  }
+
+  inline void shuffle() {
+    static std::random_device rd;
+    static std::mt19937       g(rd());
+
+    for (int i = (int)inputs.size() - 1; i > 0; i--) {
+      std::uniform_int_distribution<int> dist(0, i);
+
+      int j = dist(g);
+
+      std::swap(inputs[i], inputs[j]);
+      std::swap(targets[i], targets[j]);
+    }
+  }
+};
+
+struct ManualDataSet : public DataSetStorage<std::vector<float>, std::vector<float>> {
+  inline virtual const std::vector<float>& getInput(int index) override { return inputs[index]; }
+  inline virtual const std::vector<float>& getOutput(int index) override { return targets[index]; }
 };
 
 

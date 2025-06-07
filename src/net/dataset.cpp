@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <random>
+#include <functional>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -28,46 +29,22 @@
 
 namespace fs = std::filesystem;
 
-struct StorageDataset : public DataSet {
-  int maxElements;
+struct LazyDataSet : public DataSetStorage<std::string, std::vector<float>> {
+  std::function<std::vector<float>(const std::string&)> loadDataFunctor;
+  std::vector<float>                                    cached;
 
-  std::vector<std::vector<float>> inputs;
-  std::vector<std::vector<float>> outputs;
-
-  virtual std::vector<float>& getInput(int index) override {
-    return inputs[index];
+  virtual const std::vector<float>& getInput(int index) override {
+    return cached = loadDataFunctor(inputs[index]);
   }
-  virtual std::vector<float>& getOutput(int index) override {
-    return outputs[index];
-  }
-  virtual int getInputCount() override {
-    if (maxElements != 0)
-      return std::min(maxElements, (int)inputs.size());
-    return inputs.size();
-  }
-  virtual int getOutputCount() override {
-    if (maxElements != 0)
-      return std::min(maxElements, (int)outputs.size());
-    return outputs.size();
-  }
-
-  void shuffle() {
-    static std::random_device rd;
-    static std::mt19937       g(rd());
-
-    for (int i = (int)inputs.size() - 1; i > 0; i--) {
-      std::uniform_int_distribution<int> dist(0, i);
-
-      int j = dist(g);
-
-      std::swap(inputs[i], inputs[j]);
-      std::swap(outputs[i], outputs[j]);
-    }
+  virtual const std::vector<float>& getOutput(int index) override {
+    return targets[index];
   }
 };
 
+
 #ifdef MMAP_READ
-static std::vector<float> loadimageMMAP(const std::string& filepath, int& width, int& height, int& channels) {
+static std::vector<float> loadimageMMAP(const std::string& filepath) {
+  int width, height, channels;
 
   int fd = open(filepath.c_str(), O_RDONLY);
   if (fd < 0) {
@@ -114,7 +91,8 @@ static std::vector<float> loadimageMMAP(const std::string& filepath, int& width,
 
 #endif
 
-static std::vector<float> loadimageRaw(const std::string& filepath, int& width, int& height, int& channels) {
+static std::vector<float> loadimageRaw(const std::string& filepath) {
+  int            width, height, channels;
   unsigned char* data = stbi_load(filepath.c_str(), &width, &height, &channels, 1);
   if (!data) {
     std::cerr << "Failed to load image: " << filepath << "\n";
@@ -139,7 +117,10 @@ static auto loadimage = loadimageRaw;
 
 std::shared_ptr<DataSet> createStorageDataSet(const std::string& filepath) {
   std::cout << "Reading large dataset..." << std::endl;
-  auto dataset = std::make_shared<StorageDataset>();
+  auto dataset = std::make_shared<LazyDataSet>();
+
+  dataset->loadDataFunctor = loadimage;
+
 
   auto makevector = [](int index, int size) {
     std::vector<float> v(size, 0);
@@ -169,13 +150,11 @@ std::shared_ptr<DataSet> createStorageDataSet(const std::string& filepath) {
       if (ext != ".png" && ext != ".PNG" && ext != ".jpg" && ext != ".JPG") continue;
 
       std::string filePathStr = fileEntry.path().string();
-      auto        inputData   = loadimage(filePathStr, width, height, channels);
 
-      if (!inputData.empty()) {
-        dataset->inputs.push_back(std::move(inputData));
-        dataset->outputs.push_back(tag);
-        filecount++;
-      }
+
+      dataset->inputs.push_back(filePathStr);
+      dataset->targets.push_back(tag);
+      filecount++;
     }
 
     std::cout << i << " # filecount = " << filecount << " w: " << width << " h: " << height << " c: " << channels << std::endl;
@@ -184,8 +163,7 @@ std::shared_ptr<DataSet> createStorageDataSet(const std::string& filepath) {
   std::cout << "Shuffling " << std::endl;
 
   dataset->shuffle();
-
-  dataset->maxElements = 500;
+  dataset->trim(500);
 
   std::cout << "Done" << std::endl;
 
