@@ -101,6 +101,23 @@ struct DataSet {
   virtual int                       getOutputCount()     = 0;
 };
 
+//Maps all the output to the input data without making copies
+struct AutoencoderDataSet : public DataSet {
+  std::shared_ptr<DataSet> parent;
+
+  AutoencoderDataSet(std::shared_ptr<DataSet> _parent) :
+    parent(_parent) {}
+
+  const std::vector<float>& getInput(int index) override { return parent->getInput(index); }
+  int                       getInputCount() override { return parent->getInputCount(); }
+
+  const std::vector<float>& getOutput(int index) override { return getInput(index); }
+  int                       getOutputCount() override { return getInputCount(); }
+};
+
+inline std::shared_ptr<DataSet> makeAutoencodingDataset(std::shared_ptr<DataSet> parent) { return std::shared_ptr<DataSet>(new AutoencoderDataSet(parent)); }
+
+
 template <typename T, typename V>
 struct DataSetStorage : public DataSet {
   std::vector<T> inputs;

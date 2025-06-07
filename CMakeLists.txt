@@ -24,4 +24,4 @@ target_link_libraries(tui PUBLIC glfw OpenMP::OpenMP_CXX)
 add_executable(cli ${SRC} src/cli.cc)
 target_include_directories(cli PUBLIC src)
 
-target_link_libraries(cli PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(cli PUBLIC glfw OpenMP::OpenMP_CXX)

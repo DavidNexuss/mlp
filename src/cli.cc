@@ -1,5 +1,6 @@
 #include "net/net.h"
 #include "util/stdout.hpp"
+#include "net/tunning.hpp"
 
 //XOR test suite backpropagator
 void xortest() {
@@ -108,7 +109,6 @@ std::shared_ptr<MLP> createMNISTCNN() {
 }
 
 std::shared_ptr<MLP> createMNISTDeepMLP() {
-  // Input layer size is 28*28 = 784 pixels flattened
   std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(28 * 28));
 
   // Deep fully connected layers with ReLU activations
@@ -121,6 +121,28 @@ std::shared_ptr<MLP> createMNISTDeepMLP() {
 
   OptimizerCreateInfo optInfo;
   optInfo.learningRate = 0.005f;
+  optInfo.momentum     = 0.9f;
+  optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+  net->SetOptimizer(optInfo);
+
+  net->Initialize(MLP_INITIALIZE_HE);
+
+  return net;
+}
+std::shared_ptr<MLP> createMNISTDeepAutoencoder() {
+  std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(28 * 28));
+
+  net->AddLayer(512, MLP_ACTIVATION_RELU);
+  net->AddLayer(256, MLP_ACTIVATION_RELU);
+  net->AddLayer(64, MLP_ACTIVATION_RELU); // Latent space (bottleneck)
+
+  net->AddLayer(256, MLP_ACTIVATION_RELU);
+  net->AddLayer(512, MLP_ACTIVATION_RELU);
+
+  net->AddLayer(28 * 28, MLP_ACTIVATION_SIGMOID);
+
+  OptimizerCreateInfo optInfo;
+  optInfo.learningRate = 0.001f;
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
   net->SetOptimizer(optInfo);
@@ -143,7 +165,6 @@ void train(std::shared_ptr<DataSet> ds, std::shared_ptr<DataSet> test, std::shar
 }
 
 void mnistclassifier() {
-
   printf("================[MNIST TEST]========================\n");
 
   std::shared_ptr<DataSet> ds   = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - training/");
@@ -155,8 +176,21 @@ void mnistclassifier() {
   train(ds, test, createMNISTCNN());
 }
 
+void mnistautoencoder() {
+  printf("================[MNIST AUTOENCODER]========================\n");
+
+  std::shared_ptr<DataSet> ds   = makeAutoencodingDataset(createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - training/"));
+  std::shared_ptr<DataSet> test = makeAutoencodingDataset(createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - testing/"));
+
+  train(ds, test, createMNISTDeepAutoencoder());
+}
+
 int main() {
+  tunning_unit_test();
   xortest();
   autoencoder();
   mnistclassifier();
+
+  //It can seriously take a lot of time
+  //mnistautoencoder();
 }
