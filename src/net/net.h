@@ -95,6 +95,9 @@ struct MLP {
 MLP* mlpCreate(int inputLayerSize);
 MLP* mlpCreate(MLPCreateInfo ci);
 
+MLP* mlpCreateGPU(int inputLayerSize);
+MLP* mlpCreateGPU(MLPCreateInfo ci);
+
 struct DataSet {
   virtual const std::vector<float>& getInput(int index)  = 0;
   virtual const std::vector<float>& getOutput(int index) = 0;

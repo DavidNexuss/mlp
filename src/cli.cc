@@ -214,7 +214,5 @@ int main() {
   xortest();
   autoencoder();
   mnistclassifier();
-
-  //It can seriously take a lot of time
-  //mnistautoencoder();
+  mnistautoencoder();
 }
