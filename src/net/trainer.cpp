@@ -42,9 +42,7 @@ struct MLPTrainerImpl : public MLPTrainer {
 
       float loss = lossDataset(ds);
 
-      if (epoch % 10 == 0 || loss < lossThreshold) {
-        std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
-      }
+      std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
 
       if (loss < lossThreshold) {
         std::cout << "Early stopping at epoch " << epoch << std::endl;

@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <random>
+#include <map>
 #include <functional>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -21,14 +22,18 @@
 #  include <sys/stat.h>
 #endif
 
+
 namespace fs = std::filesystem;
 
 struct LazyDataSet : public DataSetStorage<std::string, std::vector<float>> {
   std::function<std::vector<float>(const std::string&)> loadDataFunctor;
-  std::vector<float>                                    cached;
+  std::map<int, std::vector<float>>                     cache;
 
   virtual const std::vector<float>& getInput(int index) override {
-    return cached = loadDataFunctor(inputs[index]);
+    auto it = cache.find(index);
+    if (it == cache.end())
+      return cache[index] = loadDataFunctor(inputs[index]);
+    return it->second;
   }
   virtual const std::vector<float>& getOutput(int index) override {
     return targets[index];
@@ -157,7 +162,9 @@ std::shared_ptr<DataSet> createStorageDataSet(const std::string& filepath) {
   std::cout << "Shuffling " << std::endl;
 
   dataset->shuffle();
-  dataset->trim(500);
+  int n = 200;
+  std::cout << "Trimming to " << n << std::endl;
+  dataset->trim(n);
 
   std::cout << "Done" << std::endl;
 

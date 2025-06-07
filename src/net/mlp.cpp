@@ -8,6 +8,7 @@
 #include "loss.hpp"
 #include <memory>
 #include <omp.h>
+#include <core/debug.hpp>
 
 struct Layer {
   //Layer information
@@ -35,6 +36,14 @@ struct MaxPoolingLayer : public Layer {
 
   int kernelSize;
   int stride;
+
+  virtual int inputSize() override {
+    return inputChannels * inputWidth * inputHeight;
+  }
+
+  virtual int outputSize() override {
+    return inputChannels * outputWidth() * outputHeight();
+  }
 
   MaxPoolingLayer(int inChannels, int inWidth, int inHeight, int kSize, int stride) :
     inputChannels(inChannels), inputWidth(inWidth), inputHeight(inHeight), kernelSize(kSize), stride(stride) {}
@@ -259,6 +268,11 @@ struct DenseLayer : public Layer {
   void propagate(const std::vector<float>& input, std::vector<float>& output) override {
     output.resize(outputSize());
 
+    if (weights.size() > 0 && weights[0].size() != input.size()) {
+      LOG("[DenseLayer] Size mismatch. Expected input: %d, Received input: %d\n", inputSize(), (int)input.size());
+      exit(1);
+    }
+
 #pragma omp parallel for
     for (int i = 0; i < (int)output.size(); i++) {
       float accum = bias[i];
@@ -269,8 +283,6 @@ struct DenseLayer : public Layer {
     }
 
     if (activationFunction == MLP_ACTIVATION_SOFTMAX) {
-      // softmax typically involves a reduction and normalization across all outputs
-      // it is better to keep it serial or implement a parallel version carefully
       softmax(output);
     } else {
 #pragma omp parallel for
@@ -349,6 +361,14 @@ struct MLPImpl : public MLP {
     layers.push_back(std::shared_ptr<Layer>(new DenseLayer(lastLayerSize, neurons, function)));
     if (init != MLP_INITIALIZE_NONE)
       InitializeLayer(init, layers.size() - 1);
+  }
+
+  void AddMaxPoolLayer(int inChannels, int inWidth, int inHeight, int kSize, int stride, InitializationStrategy init) override {
+    layers.push_back(std::make_shared<MaxPoolingLayer>(inChannels, inWidth, inHeight, kSize, stride));
+
+    if (init != MLP_INITIALIZE_NONE) {
+      InitializeLayer(init, layers.size() - 1);
+    }
   }
 
   void AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy) override {
@@ -449,7 +469,8 @@ struct MLPImpl : public MLP {
   }
 
   void InitializeXavier(int index) {
-    auto&  layer   = layers[index];
+    auto& layer = layers[index];
+    if (layer->weights.size() == 0) return;
     size_t fan_in  = layer->weights[0].size(); // Inputs to each neuron
     size_t fan_out = layer->weights.size();    // Number of neurons in this layer
 
@@ -461,7 +482,8 @@ struct MLPImpl : public MLP {
   }
 
   void InitializeHe(int index) {
-    auto&  layer  = layers[index];
+    auto& layer = layers[index];
+    if (layer->weights.size() == 0) return;
     size_t fan_in = layer->weights[0].size(); // Inputs to each neuron
     float  stddev = sqrt(2.0f / fan_in);
     float  limit  = sqrt(6.0f / fan_in);

@@ -54,10 +54,10 @@ void autoencoder() {
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
 
-  std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(2));
+  std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(3));
 
   net->AddLayer(10, MLP_ACTIVATION_RELU);
-  net->AddLayer(2, MLP_ACTIVATION_RELU);
+  net->AddLayer(4, MLP_ACTIVATION_RELU);
   net->AddLayer(10, MLP_ACTIVATION_RELU);
   net->AddLayer(3, MLP_ACTIVATION_SIGMOID);
 
@@ -99,6 +99,28 @@ std::shared_ptr<MLP> createMNISTCNN() {
 
   OptimizerCreateInfo optInfo;
   optInfo.learningRate = 0.05f;
+  optInfo.momentum     = 0.9f;
+  optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+  net->SetOptimizer(optInfo);
+
+  net->Initialize(MLP_INITIALIZE_HE);
+
+  return net;
+}
+
+std::shared_ptr<MLP> createMNISTCNNPooling() {
+  std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(28 * 28));
+
+  net->AddConvolutionalLayer(1, 28, 28, 16, 3, 1, 1, MLP_ACTIVATION_RELU);
+  net->AddMaxPoolLayer(16, 28, 28, 2, 2);
+  net->AddConvolutionalLayer(16, 14, 14, 32, 3, 1, 1, MLP_ACTIVATION_RELU);
+  net->AddMaxPoolLayer(32, 14, 14, 2, 2);
+
+  net->AddLayer(128, MLP_ACTIVATION_RELU);
+  net->AddLayer(10, MLP_ACTIVATION_SOFTMAX);
+
+  OptimizerCreateInfo optInfo;
+  optInfo.learningRate = 0.001f;
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
   net->SetOptimizer(optInfo);
@@ -170,6 +192,8 @@ void mnistclassifier() {
   std::shared_ptr<DataSet> ds   = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - training/");
   std::shared_ptr<DataSet> test = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - testing/");
 
+  printf("====(CNN + Pooling)===\n");
+  train(ds, test, createMNISTCNNPooling());
   printf("====(DNN)===\n");
   train(ds, test, createMNISTDeepMLP());
   printf("====(CNN)===\n");

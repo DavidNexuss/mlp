@@ -80,6 +80,7 @@ typedef struct MLP MLP;
 
 struct MLP {
   virtual void  AddLayer(int neurons, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE)                                                                                                                  = 0;
+  virtual void  AddMaxPoolLayer(int inChannels, int inWidth, int inHeight, int kSize, int stride, InitializationStrategy init = MLP_INITIALIZE_NONE)                                                                                       = 0;
   virtual void  AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy = MLP_INITIALIZE_NONE) = 0;
   virtual void  Propagate(const vector& input, vector& output)                                                                                                                                                                             = 0;
   virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss)                                                                                                                                              = 0;
