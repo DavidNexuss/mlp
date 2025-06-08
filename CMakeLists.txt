@@ -25,9 +25,9 @@ file(GLOB_RECURSE SRC
 
 add_executable(tui ${SRC} src/tui.cc)
 target_include_directories(tui PUBLIC src)
-target_link_libraries(tui PUBLIC glfw OpenMP::OpenMP_CXX cuda)
+target_link_libraries(tui PUBLIC glfw OpenMP::OpenMP_CXX cuda CUDA::cudart)
 
 add_executable(cli ${SRC} src/cli.cc)
 target_include_directories(cli PUBLIC src)
 
-target_link_libraries(cli PUBLIC glfw OpenMP::OpenMP_CXX cuda)
+target_link_libraries(cli PUBLIC glfw OpenMP::OpenMP_CXX cuda CUDA::cudart)

@@ -6,7 +6,26 @@
 
 //Basics
 
-using vector = std::vector<float>;
+struct vector {
+  bool iscpu;
+
+  std::vector<float> host;
+  cuda_vector<float> device;
+
+  vector(std::vector<float>&& _host) :
+    host(std::move(_host)) { iscpu = true; }
+
+  vector(cuda_vector<float>&& _device) :
+    device(std::move(_device)) { iscpu = false; }
+
+  operator std::vector<float>&() {
+    if (iscpu) return host;
+    else {
+      return host = device.download();
+    }
+  }
+  operator const cuda_vector<float>&() { return device; }
+};
 
 //Activations functions
 enum ActivationFunction {
@@ -48,6 +67,7 @@ struct OptimizerCreateInfo {
 
   //Hyper parameters
   float momentum = 0.9f;
+  float l2       = 0.0f;
 };
 
 

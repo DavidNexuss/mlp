@@ -4,7 +4,7 @@
 #include "net.h"
 #include <cuda.h>
 
-__device__ inline float activate(ActivationFunction f, float x) {
+__host__ __device__ inline float activate(ActivationFunction f, float x) {
   switch (f) {
     case MLP_ACTIVATION_AFFINE: return x;
     case MLP_ACTIVATION_COSINE: return cosf(x);
@@ -16,7 +16,7 @@ __device__ inline float activate(ActivationFunction f, float x) {
   }
 }
 
-inline float activation_derivative(ActivationFunction f, float x) {
+__host__ __device__ inline float activation_derivative(ActivationFunction f, float x) {
   switch (f) {
     case MLP_ACTIVATION_AFFINE: return 1.0f;
     case MLP_ACTIVATION_COSINE: return -sinf(x);

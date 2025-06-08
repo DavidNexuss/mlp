@@ -3,6 +3,9 @@
 #include <cassert>
 #include <cstdio>
 #include <cuda.h>
+#include <vector>
+
+void fill_kernel(void* buffer, void* value, size_t valuesize, size_t count);
 
 template <typename T>
 class cuda_vector {
@@ -11,6 +14,11 @@ class cuda_vector {
   size_t capacity_;
 
   public:
+  cuda_vector(const std::vector<T>& other) {
+    reserve(other.size());
+    size_ = other.size();
+    cudaMemcpy(data_, other.data(), sizeof(T) * other.size(), cudaMemcpyHostToDevice);
+  }
   __host__ cuda_vector(size_t initial_capacity = 0) :
     data_(nullptr), size_(0), capacity_(0) {
     if (initial_capacity > 0) {
@@ -22,6 +30,14 @@ class cuda_vector {
     if (data_) {
       cudaFree(data_);
     }
+  }
+
+  std::vector<T> download() {
+    if (data_) {
+      std::vector<T> result(size_);
+      cudaMemcpy(result.data(), data_, sizeof(T) * size_, cudaMemcpyDeviceToHost);
+    }
+    return {};
   }
 
   cuda_vector(const cuda_vector&)            = delete;
@@ -45,6 +61,17 @@ class cuda_vector {
       other.capacity_ = 0;
     }
     return *this;
+  }
+
+  __host__ void resize(size_t newsize) {
+    reserve(newsize);
+    size_ = newsize;
+  }
+
+  __host__ void resize(size_t newsize, T newvalue) {
+    reserve(newsize);
+    fill_kernel(data_, &newvalue, sizeof(T), newsize - size_);
+    size_ = newsize;
   }
 
   __host__ void reserve(size_t new_capacity) {
