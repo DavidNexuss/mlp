@@ -53,6 +53,7 @@ void autoencoder() {
   optInfo.learningRate = 0.1f;
   optInfo.momentum     = 0.9f;
   optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+  optInfo.l2           = 1e-4;
 
   std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(3));
 

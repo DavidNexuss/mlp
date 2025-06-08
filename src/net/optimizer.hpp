@@ -41,12 +41,14 @@ struct SGDOptimizer : public MLPOptimizer {
 struct SGDMomentum : public MLPOptimizer {
   float                           learningRate;
   float                           momentum;
+  float                           lambda;
   std::vector<std::vector<float>> velocityWeights;
   std::vector<float>              velocityBias;
 
   SGDMomentum(OptimizerCreateInfo ci) {
     learningRate = ci.learningRate;
     momentum     = ci.momentum;
+    lambda       = ci.l2;
   }
 
   virtual void initialize(OptimizerInputParameters ci) override {
@@ -57,7 +59,8 @@ struct SGDMomentum : public MLPOptimizer {
   virtual void update(OptimizerUpdateParameters layer) override {
     for (int i = 0; i < layer.weights.size(); ++i) {
       for (int j = 0; j < layer.weights[i].size(); ++j) {
-        velocityWeights[i][j] = momentum * velocityWeights[i][j] - learningRate * layer.gradWeights[i][j];
+        float grad            = layer.gradWeights[i][j] + lambda * layer.weights[i][j];
+        velocityWeights[i][j] = momentum * velocityWeights[i][j] - learningRate * grad;
         layer.weights[i][j] += velocityWeights[i][j];
       }
       velocityBias[i] = momentum * velocityBias[i] - learningRate * layer.gradBias[i];

@@ -47,6 +47,7 @@ struct OptimizerCreateInfo {
 
   //Hyper parameters
   float momentum = 0.9f;
+  float l2       = 0.0f;
 };
 
 
