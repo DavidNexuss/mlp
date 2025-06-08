@@ -2,8 +2,9 @@
 #include <math.h>
 #include <algorithm>
 #include "net.h"
+#include <cuda.h>
 
-inline float activate(ActivationFunction f, float x) {
+__device__ inline float activate(ActivationFunction f, float x) {
   switch (f) {
     case MLP_ACTIVATION_AFFINE: return x;
     case MLP_ACTIVATION_COSINE: return cosf(x);

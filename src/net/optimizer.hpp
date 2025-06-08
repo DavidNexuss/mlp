@@ -81,7 +81,7 @@ struct Adam : public MLPOptimizer {
 };
 
 
-MLPOptimizer* mlpOptimzerCreate(OptimizerCreateInfo ci) {
+inline MLPOptimizer* mlpOptimzerCreate(OptimizerCreateInfo ci) {
   switch (ci.function) {
     default:
     case MLP_OPTIMIZER_SGD: return new SGDOptimizer(ci);

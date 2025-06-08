@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <random>
+#include "compute.hpp"
 
 //Basics
 
