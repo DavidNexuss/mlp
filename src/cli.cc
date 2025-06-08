@@ -1,6 +1,7 @@
 #include "net/net.h"
 #include "util/stdout.hpp"
 #include "net/tunning.hpp"
+#include "net/automl.hpp"
 
 //XOR test suite backpropagator
 void xortest() {
@@ -47,7 +48,7 @@ void xortest() {
   printf("\n");
 }
 
-void autoencoder() {
+void autoencoder(bool autotune) {
   printf("================[AUTOENCODER]========================\n");
   OptimizerCreateInfo optInfo;
   optInfo.learningRate = 0.1f;
@@ -74,6 +75,14 @@ void autoencoder() {
     {1.0f, 1.0f, 0.0f}};
 
   ds->targets = ds->inputs;
+
+  if (autotune) {
+    std::shared_ptr<AutoTunning> tunning = autoTunningCreate();
+    tunning->SetNetwork(net);
+    tunning->SetDataSet(ds);
+    net->SetOptimizer(tunning->Tune(40));
+  }
+
 
   std::unique_ptr<MLPTrainer> trainer = std::unique_ptr<MLPTrainer>(mlpTrainerCreate());
 
@@ -213,7 +222,8 @@ void mnistautoencoder() {
 int main() {
   tunning_unit_test();
   xortest();
-  autoencoder();
+  autoencoder(true);
+  autoencoder(false);
   mnistclassifier();
   mnistautoencoder();
 }

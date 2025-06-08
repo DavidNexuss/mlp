@@ -16,10 +16,9 @@ struct MLPTrainerImpl : public MLPTrainer {
 
   void SetTestDataset(std::shared_ptr<DataSet> _ds) override { this->test = _ds; }
 
-  virtual void Train() override {
+  virtual float Train(int maxEpochs) override {
 
     const float lossThreshold = 0.001f;
-    const int   maxEpochs     = 10'000;
 
     auto lossDataset = [this](std::shared_ptr<DataSet> ds) {
       float loss = 0.0f;
@@ -38,9 +37,10 @@ struct MLPTrainerImpl : public MLPTrainer {
       return loss;
     };
 
+    float loss;
     for (int epoch = 0; epoch < maxEpochs; ++epoch) {
 
-      float loss = lossDataset(ds);
+      loss = lossDataset(ds);
 
       std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
 
@@ -52,9 +52,11 @@ struct MLPTrainerImpl : public MLPTrainer {
 
     if (test) {
       std::cout << "Performing testing... ";
-      float loss = lossDataset(test);
+      loss = lossDataset(test);
       std::cout << " loss = " << loss << std::endl;
     }
+
+    return loss;
   }
 
   virtual ~MLPTrainerImpl() {}

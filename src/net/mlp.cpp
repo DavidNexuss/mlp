@@ -11,6 +11,8 @@
 #include <core/debug.hpp>
 
 struct Layer {
+  InitializationStrategy initialization;
+
   //Layer information
   std::vector<std::vector<float>> weights;
   std::vector<float>              bias;
@@ -27,6 +29,8 @@ struct Layer {
   virtual int outputSize() { return weights.size(); }
 
   virtual ~Layer() = default;
+
+  virtual Layer* Clone() = 0;
 };
 
 struct MaxPoolingLayer : public Layer {
@@ -123,6 +127,10 @@ struct MaxPoolingLayer : public Layer {
         }
       }
     }
+  }
+
+  Layer* Clone() override {
+    return new MaxPoolingLayer(*this);
   }
 };
 
@@ -255,6 +263,10 @@ struct ConvolutionalLayer : public Layer {
       }
     }
   }
+
+  Layer* Clone() override {
+    return new ConvolutionalLayer(*this);
+  }
 };
 
 struct DenseLayer : public Layer {
@@ -342,6 +354,10 @@ struct DenseLayer : public Layer {
       }
     }
   }
+
+  Layer* Clone() override {
+    return new DenseLayer(*this);
+  }
 };
 struct MLPImpl : public MLP {
   std::vector<std::shared_ptr<Layer>> layers;
@@ -359,12 +375,14 @@ struct MLPImpl : public MLP {
   void AddLayer(int neurons, ActivationFunction function, InitializationStrategy init) override {
     int lastLayerSize = layers.size() ? layers.back()->outputSize() : inputLayerSize;
     layers.push_back(std::shared_ptr<Layer>(new DenseLayer(lastLayerSize, neurons, function)));
+    layers.back()->initialization = init;
     if (init != MLP_INITIALIZE_NONE)
       InitializeLayer(init, layers.size() - 1);
   }
 
   void AddMaxPoolLayer(int inChannels, int inWidth, int inHeight, int kSize, int stride, InitializationStrategy init) override {
     layers.push_back(std::make_shared<MaxPoolingLayer>(inChannels, inWidth, inHeight, kSize, stride));
+    layers.back()->initialization = init;
 
     if (init != MLP_INITIALIZE_NONE) {
       InitializeLayer(init, layers.size() - 1);
@@ -373,6 +391,7 @@ struct MLPImpl : public MLP {
 
   void AddConvolutionalLayer(int inputChannels, int inputWidth, int inputHeight, int outputChannels, int kernelSize, int stride, int padding, ActivationFunction function, InitializationStrategy strategy) override {
     layers.push_back(std::make_shared<ConvolutionalLayer>(inputChannels, inputWidth, inputHeight, outputChannels, kernelSize, stride, padding, function));
+    layers.back()->initialization = strategy;
 
     if (strategy != MLP_INITIALIZE_NONE) {
       InitializeLayer(strategy, layers.size() - 1);
@@ -457,6 +476,10 @@ struct MLPImpl : public MLP {
     }
   }
 
+  OptimizerCreateInfo GetOptimizer() override {
+    return this->optimizerCreateInfo;
+  }
+
   void SetOptimizer(const OptimizerCreateInfo ci) override {
     this->optimizerCreateInfo = ci;
   }
@@ -509,6 +532,20 @@ struct MLPImpl : public MLP {
     for (int i = 0; i < layers.size(); i++) {
       InitializeLayer(strategy, i);
     }
+  }
+  std::shared_ptr<MLP> Clone() override {
+    MLPImpl* clone = new MLPImpl(inputLayerSize);
+
+    clone->inputLayerSize = inputLayerSize;
+    clone->loss           = loss;
+
+    for (int i = 0; i < layers.size(); i++) {
+      clone->layers.push_back(std::shared_ptr<Layer>(layers[i]->Clone()));
+    }
+
+    clone->SetOptimizer(optimizerCreateInfo);
+
+    return std::shared_ptr<MLP>(clone);
   }
 
   virtual ~MLPImpl() {}
