@@ -11,12 +11,15 @@ make -j
 [ ] Optimizers
     [X] SGD
     [X] SGD Momentum
-    [ ] AdamA
+    [B] AdamA
     [ ] Newton + BFGS
 [ ] Improvements
-    [ ] Leverage dynamic updating
-    [ ] Batch normalization
+    [B] Leverage dynamic updating
+    [X] Batch normalization
     [ ] Residual connections
     [X] L2 Ridge
 [X] MLP
-[ ] CNN
+[X] CNN
+[X] Max Pooling
+[ ] GPU implementation CNN
+[ ] Visualizer
