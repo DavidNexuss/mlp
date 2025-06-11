@@ -21,6 +21,10 @@ struct Application : public IApplication {
   }
 
   void render() override {
+    ImGui::Begin("Options");
+    ImGui::SliderInt("Test case", &current, 0, test.size() - 1);
+    ImGui::End();
+
     ImGui::Begin("Network");
     test[current]->getNetwork()->GUI();
     test[current]->getNetwork()->Visualize();
