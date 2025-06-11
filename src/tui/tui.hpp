@@ -3,6 +3,10 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <memory>
+#include <imgui/imgui.h>
+#include <tui/vlWindow.hpp>
+
+inline vlWindow* window;
 
 struct IApplication {
   virtual void render() = 0;

@@ -23,6 +23,8 @@ struct EngineImpl : public Engine {
     auto window = vlWindowCreate(ci);
     ImGui::CreateContext();
 
+    ::window = window.get();
+
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;

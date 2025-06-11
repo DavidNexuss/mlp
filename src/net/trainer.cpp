@@ -8,6 +8,11 @@ struct MLPTrainerImpl : public MLPTrainer {
   std::shared_ptr<DataSet> test;
   LossFunction             lossFunction = MLP_LOSS_MSE;
 
+
+  std::shared_ptr<DataSet> getDataset() override { return ds; }
+  std::shared_ptr<MLP>     getNetwork() override { return net; }
+  std::shared_ptr<DataSet> getTestSet() override { return test; }
+
   void SetLossFunction(LossFunction func) override { this->lossFunction = func; }
 
   void SetDataset(std::shared_ptr<DataSet> ds) override { this->ds = ds; }

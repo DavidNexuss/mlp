@@ -90,6 +90,8 @@ struct MLP {
   virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                                                                                                                                                                 = 0;
   virtual void  InitializeLayer(InitializationStrategy strategy, int layerIndex)                                                                                                                                                           = 0;
   virtual void  Initialize(InitializationStrategy strategy)                                                                                                                                                                                = 0;
+  virtual void  Visualize()                                                                                                                                                                                                                = 0;
+  virtual void  GUI()                                                                                                                                                                                                                      = 0;
   virtual ~MLP() {}
 };
 
@@ -166,6 +168,10 @@ struct MLPTrainer {
   virtual void SetDataset(std::shared_ptr<DataSet> ds)     = 0;
   virtual void SetTestDataset(std::shared_ptr<DataSet> ds) = 0;
   virtual void Train()                                     = 0;
+
+  virtual std::shared_ptr<MLP>     getNetwork() = 0;
+  virtual std::shared_ptr<DataSet> getDataset() = 0;
+  virtual std::shared_ptr<DataSet> getTestSet() = 0;
   virtual ~MLPTrainer() {};
 };
 

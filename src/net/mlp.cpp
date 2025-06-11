@@ -9,6 +9,68 @@
 #include <memory>
 #include <omp.h>
 #include <core/debug.hpp>
+#include <tui/tui.hpp>
+#include <iostream>
+
+//==========================================================GUI===========================================
+float xSpacing   = 150.0f;
+float vSpacing   = 100.0f;
+float xOffset    = 350.0f;
+float yOffset    = 350.0f;
+float wxOffset   = 100.0f;
+float wyOffset   = 100.0f;
+float neuronSize = 32.0f;
+float zoom       = 1.0f;
+
+int selectedNeuronX = -1;
+int selectedNeuronY = -1;
+
+float getNeuronSize() {
+  return 32.0f * zoom;
+}
+
+float getEdgeSize() {
+  return 2.0f * zoom;
+}
+
+ImColor getNonSelectedColor(ImColor color, int x, int y) {
+  if (selectedNeuronX == -1 || selectedNeuronY == -1) return color;
+  if (x != selectedNeuronX || y != selectedNeuronY) return ImColor(0.2f, 0.2f, 0.2f, 1.0f);
+  return color;
+}
+
+ImColor getInputNeuronColor(int x, int y) {
+  return getNonSelectedColor(ImColor(1.0f, 0.7f, 0.f, 1.0f), x, y);
+}
+
+ImColor getLayerNueronColor(int x, int y) {
+  return getNonSelectedColor(ImColor(0.8f, 0.8f, 0.8f, 1.0f), x, y);
+}
+
+ImColor getOutputNeuronColor(int x, int y) {
+  return getNonSelectedColor(ImColor(0.5f, 0.8f, 0.5f, 1.0f), x, y);
+}
+
+ImVec2 getNeuronPosition(float x, float i) {
+  return ImVec2(x * xSpacing * zoom + xOffset + wxOffset, i * vSpacing * zoom + yOffset + wyOffset);
+}
+
+bool getNeuronPositionFromMouse(float x, float y, int& x_out, int& y_out) {
+  float tx = (x - xOffset - wxOffset) / (xSpacing * zoom);
+  float ty = (y - yOffset - wyOffset) / (vSpacing * zoom);
+
+  float rx = abs(tx - round(tx));
+  float ry = abs(ty - round(ty));
+
+  if (rx < 0.4 && ry < 0.4) {
+    x_out = round(tx);
+    y_out = round(ty);
+    return true;
+  }
+  return false;
+}
+
+//=========================================================LAYERS=========================================
 
 struct Layer {
   //Layer information
@@ -26,8 +88,16 @@ struct Layer {
   virtual int inputSize() { return weights[0].size(); }
   virtual int outputSize() { return weights.size(); }
 
+  virtual void visualizeInputEdges(int x) {}
+  virtual void visualizeNeurons(int x) {}
+  virtual void visualize(int x) {}
+
+  virtual void visualizeDescription() {}
+
   virtual ~Layer() = default;
 };
+
+static ImDrawList* drawList;
 
 struct MaxPoolingLayer : public Layer {
   int inputChannels;
@@ -342,6 +412,26 @@ struct DenseLayer : public Layer {
       }
     }
   }
+
+  void visualizeInputEdges(int x) override {
+    for (int i = 0; i < weights.size(); i++) {
+      ImVec2 source = getNeuronPosition(x, i);
+      for (int l = 0; l < weights[i].size(); l++) {
+        ImVec2 target = getNeuronPosition(x - 1, l);
+        drawList->AddLine(source, target, getLayerNueronColor(x, i), getEdgeSize());
+      }
+    }
+  }
+
+  void visualizeNeurons(int x) override {
+    for (int i = 0; i < weights.size(); i++) {
+      drawList->AddCircleFilled(getNeuronPosition(x, i), getNeuronSize(), getLayerNueronColor(x, i));
+    }
+  }
+
+  void visualizeDescription() override {
+    ImGui::Text("Dense Layer: %d neurons.", (int)weights.size());
+  }
 };
 struct MLPImpl : public MLP {
   std::vector<std::shared_ptr<Layer>> layers;
@@ -512,6 +602,62 @@ struct MLPImpl : public MLP {
   }
 
   virtual ~MLPImpl() {}
+
+
+  void handleClick() {
+    int x = window->getX();
+    int y = window->getY();
+
+    bool isPressed = window->isMousePressed(GLFW_MOUSE_BUTTON_LEFT);
+
+    if (isPressed) {
+      int x_out;
+      int y_out;
+      if (getNeuronPositionFromMouse(x, y, x_out, y_out)) {
+        selectedNeuronX = x_out;
+        selectedNeuronY = y_out;
+      } else {
+        selectedNeuronX = -1;
+        selectedNeuronY = -1;
+      }
+    }
+  }
+  void Visualize() override {
+    drawList = ImGui::GetWindowDrawList();
+
+    wxOffset = ImGui::GetWindowPos().x;
+    wyOffset = ImGui::GetWindowPos().y;
+
+    handleClick();
+
+    ImGui::Text("Layer count : %d\n", (int)layers.size());
+
+    for (size_t i = 0; i < layers.size(); ++i) {
+      layers[i]->visualizeInputEdges(i);
+    }
+
+    for (int i = 0; i < inputLayerSize; i++) {
+      ImVec2 center = getNeuronPosition(-1, i);
+      drawList->AddCircleFilled(center, getNeuronSize(), getInputNeuronColor(-1, i));
+    }
+
+    for (size_t i = 0; i < layers.size(); ++i) {
+      layers[i]->visualizeNeurons(i);
+      layers[i]->visualizeDescription();
+    }
+  }
+
+  void GUI() override {
+
+    if (ImGui::Begin("MLP Visualizer options")) {
+      ImGui::InputFloat("xOffset", &xOffset);
+      ImGui::InputFloat("yOffset", &yOffset);
+      ImGui::InputFloat("xSpacing", &xSpacing);
+      ImGui::InputFloat("ySpacing", &vSpacing);
+      ImGui::InputFloat("zoom", &zoom);
+    }
+    ImGui::End();
+  }
 };
 
 MLP* mlpCreate(int inputLayerSize) {

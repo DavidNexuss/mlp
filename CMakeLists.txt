@@ -20,11 +20,13 @@ file(GLOB_RECURSE SRC
   src/*.cpp
 )
 
-add_executable(tui ${SRC} src/tui.cc)
-target_include_directories(tui PUBLIC src)
-target_link_libraries(tui PUBLIC glfw GL glew imgui OpenMP::OpenMP_CXX)
+add_library(mlp-core ${SRC})
 
-add_executable(cli ${SRC} src/cli.cc)
+add_executable(tui src/tui.cc)
+target_include_directories(tui PUBLIC src)
+target_link_libraries(tui PUBLIC glfw GL glew imgui OpenMP::OpenMP_CXX mlp-core)
+
+add_executable(cli  src/cli.cc)
 target_include_directories(cli PUBLIC src)
 
-target_link_libraries(cli PUBLIC glfw GL glew imgui OpenMP::OpenMP_CXX)
+target_link_libraries(cli PUBLIC glfw GL glew imgui OpenMP::OpenMP_CXX mlp-core)

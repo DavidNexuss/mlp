@@ -1,11 +1,30 @@
 #include <tui/tui.hpp>
 #include <imgui/imgui.h>
+#include "testsuite.hpp"
+#include <iostream>
+
+struct ForwardTest {
+  std::shared_ptr<MLP> network;
+
+  void gui() {
+  }
+};
 
 struct Application : public IApplication {
-  bool show = true;
+  std::vector<std::shared_ptr<MLPTrainer>> test;
+
+  int current;
+
+  Application() {
+    test    = getTests();
+    current = 1;
+  }
 
   void render() override {
-    ImGui::ShowDemoWindow(&show);
+    ImGui::Begin("Network");
+    test[current]->getNetwork()->GUI();
+    test[current]->getNetwork()->Visualize();
+    ImGui::End();
   }
 
   void update() override {}
