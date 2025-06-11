@@ -1,7 +1,8 @@
 #pragma once
 #include <string>
-#include <GLFW/glfw3.h>
+#include <GL/glew.h>
 #include <memory>
+#include <GLFW/glfw3.h>
 
 struct vlWindowCreateInfo {
   int         width;
@@ -37,9 +38,11 @@ struct vlWindow {
   virtual void setPos(int x, int y)  = 0;
 
   //actions
-  virtual void begin()  = 0;
-  virtual void flush()  = 0;
-  virtual bool update() = 0;
+  virtual void begin()       = 0;
+  virtual void swapBuffers() = 0;
+  virtual void pollEvents()  = 0;
+
+  virtual GLFWwindow* getInternal() = 0;
 
   virtual ~vlWindow() {}
 };

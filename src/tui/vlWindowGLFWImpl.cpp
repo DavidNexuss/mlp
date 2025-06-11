@@ -1,8 +1,8 @@
+#include "vlWindow.hpp"
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <core/debug.hpp>
 #include <unordered_map>
-#include "vlWindow.hpp"
 
 struct vlWindowImpl : public vlWindow {
   bool                         shouldRecreateSwapChain;
@@ -67,12 +67,14 @@ struct vlWindowImpl : public vlWindow {
   int  getX() override { return inputX; }
   int  getY() override { return inputY; }
   void begin() override {}
-  void flush() override {}
   int  shouldClose() override { return glfwWindowShouldClose(window); }
 
-  bool update() override {
+  void swapBuffers() override {
+    glfwSwapBuffers(window);
+  }
+
+  void pollEvents() override {
     glfwPollEvents();
-    return false;
   }
 
   float getScrollX() override {
@@ -94,8 +96,15 @@ struct vlWindowImpl : public vlWindow {
     LOG("[VL] Window dispose\n");
   }
 
+  GLFWwindow* getInternal() override { return window; }
+
   vlWindowImpl(vlWindowCreateInfo params) {
+
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     window = glfwCreateWindow(params.width, params.height, params.name.c_str(), 0, 0);
+    glfwMakeContextCurrent(window);
 
     glfwGetFramebufferSize(window, &fboWidth, &fboHeight);
     printf("[VL] vlWindow - Initial fbo window size: %d %d \n", fboWidth, fboHeight);
@@ -107,13 +116,12 @@ struct vlWindowImpl : public vlWindow {
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSwapInterval(1);
 
     LOG("[VL] Window created\n");
   }
 };
 
 std::shared_ptr<vlWindow> vlWindowCreate(vlWindowCreateInfo windowCI) {
-  vlWindowImpl* impl = new vlWindowImpl(windowCI);
-
   return std::shared_ptr<vlWindow>(new vlWindowImpl(windowCI));
 }

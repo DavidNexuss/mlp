@@ -11,6 +11,10 @@ find_package(OpenMP REQUIRED)
 
 include_directories(lib)
 include_directories(src)
+include_directories(lib/imgui)
+add_subdirectory(lib/glew)
+add_subdirectory(lib/imgui)
+
 
 file(GLOB_RECURSE SRC 
   src/*.cpp
@@ -18,9 +22,9 @@ file(GLOB_RECURSE SRC
 
 add_executable(tui ${SRC} src/tui.cc)
 target_include_directories(tui PUBLIC src)
-target_link_libraries(tui PUBLIC glfw OpenMP::OpenMP_CXX)
+target_link_libraries(tui PUBLIC glfw GL glew imgui OpenMP::OpenMP_CXX)
 
 add_executable(cli ${SRC} src/cli.cc)
 target_include_directories(cli PUBLIC src)
 
-target_link_libraries(cli PUBLIC glfw OpenMP::OpenMP_CXX)
+target_link_libraries(cli PUBLIC glfw GL glew imgui OpenMP::OpenMP_CXX)
