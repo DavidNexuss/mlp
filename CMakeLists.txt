@@ -16,6 +16,8 @@ file(GLOB_RECURSE SRC
   src/*.cpp
 )
 
+add_subdirectory(lib/glfw)
+
 add_executable(tui ${SRC} src/tui.cc)
 target_include_directories(tui PUBLIC src)
 target_link_libraries(tui PUBLIC glfw OpenMP::OpenMP_CXX)

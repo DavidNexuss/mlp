@@ -1,5 +1,11 @@
 # MLP library
 
+## Check submodules
+
+```bash
+git submodule update --init --recursive
+```
+
 ## Downlaod assets
 
 ```bash
@@ -21,6 +27,9 @@ cd build/release
 ```
 
 ## TODO List
+[X] MLP (Red densa)
+[X] CNN (Anomena)
+[X] Max Pooling (Anomena)
 [ ] Optimizers
     [X] SGD
     [X] SGD Momentum
@@ -31,8 +40,5 @@ cd build/release
     [X] Batch normalization
     [ ] Residual connections
     [X] L2 Ridge
-[X] MLP
-[X] CNN
-[X] Max Pooling
 [ ] GPU implementation CNN
 [ ] Visualizer
