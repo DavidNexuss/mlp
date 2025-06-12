@@ -708,10 +708,38 @@ struct MLPImpl : public MLP {
       }
     }
   }
+
+  float getVisualSizeWidth() {
+    return (layers.size() + 1) * xSpacing;
+  }
+
+  float getVisualSizeHeight() {
+    int height = 0;
+    for (int i = 0; i < layers.size(); i++) {
+      height = std::max(layers[i]->getVisualSize(), height);
+    }
+    return height;
+  }
+
+  void visualizeSetOptimalViewport() {
+    float netWidth  = getVisualSizeWidth();
+    float netHeight = getVisualSizeHeight();
+
+    int width  = ImGui::GetWindowSize().x;
+    int height = ImGui::GetWindowSize().y;
+
+    if (width < height) {
+      zoom = width / netWidth;
+    } else {
+      zoom = height / (netHeight * vSpacing);
+    }
+  }
+
   void Visualize() override {
     drawList = ImGui::GetWindowDrawList();
     //guiDrawGrid(0.02f);
 
+    visualizeSetOptimalViewport();
     wxOffset = ImGui::GetWindowPos().x;
     wyOffset = ImGui::GetWindowPos().y;
 
