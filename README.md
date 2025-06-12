@@ -1,5 +1,10 @@
 # MLP library
 
+## Downlaod assets
+
+```bash
+bash scripts/download-dataset.sh
+```
 ## Compiling
 
 ```bash
@@ -7,6 +12,14 @@ bash scripts/make.sh
 cd build/release
 make -j
 ```
+
+## Running 
+
+```bash
+cd build/release
+./cli
+```
+
 ## TODO List
 [ ] Optimizers
     [X] SGD
