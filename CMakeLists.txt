@@ -7,8 +7,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(mlp)
 
-find_package(OpenMP REQUIRED)
-
 include_directories(lib)
 include_directories(src)
 
@@ -20,9 +18,9 @@ add_subdirectory(lib/glfw)
 
 add_executable(tui ${SRC} src/tui.cc)
 target_include_directories(tui PUBLIC src)
-target_link_libraries(tui PUBLIC glfw OpenMP::OpenMP_CXX)
+target_link_libraries(tui PUBLIC glfw)
 
 add_executable(cli ${SRC} src/cli.cc)
 target_include_directories(cli PUBLIC src)
 
-target_link_libraries(cli PUBLIC glfw OpenMP::OpenMP_CXX)
+target_link_libraries(cli PUBLIC glfw)

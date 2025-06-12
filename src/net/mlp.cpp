@@ -7,8 +7,15 @@
 #include "optimizer.hpp"
 #include "loss.hpp"
 #include <memory>
-#include <omp.h>
 #include <core/debug.hpp>
+
+#if __linux__
+#  include <omp.h>
+#else
+#endif
+
+int omp_get_thread_num() { return 0; }
+int omp_get_max_threads() { return 1; }
 
 struct Layer {
   //Layer information
