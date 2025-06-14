@@ -46,10 +46,10 @@ struct OptimizerCreateInfo {
   OptimizerFunction function;
 
   //Hyper parameters
-  float momentum = 0.9f;
-  float l2       = 0.0f;
-  float adam_beta1;
-  float adam_beta2;
+  float momentum   = 0.9f;
+  float l2         = 0.0f;
+  float adam_beta1 = 0.9f;
+  float adam_beta2 = 0.999f;
 };
 
 

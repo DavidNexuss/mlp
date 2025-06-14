@@ -91,6 +91,27 @@ void autoencoder() {
   printf("\n");
 }
 
+
+bool useAdam         = false;
+bool useCrossEntropy = false;
+
+void configureOptimizer(std::shared_ptr<MLP> mlp) {
+
+  OptimizerCreateInfo optInfo;
+  if (useAdam) {
+    optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+    optInfo.learningRate = 0.05f;
+    optInfo.momentum     = 0.9f;
+    optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
+  } else {
+    optInfo.function   = MLP_OPTIMIZER_ADAM;
+    optInfo.adam_beta1 = 0.9f;
+    optInfo.adam_beta2 = 0.999f;
+  }
+
+  mlp->SetOptimizer(optInfo);
+}
+
 std::shared_ptr<MLP> createMNISTCNN() {
   std::shared_ptr<MLP> net = std::shared_ptr<MLP>(mlpCreate(28 * 28));
   net->AddConvolutionalLayer(1, 28, 28, 16, 3, 1, 1, MLP_ACTIVATION_RELU);
@@ -98,11 +119,7 @@ std::shared_ptr<MLP> createMNISTCNN() {
   net->AddLayer(128, MLP_ACTIVATION_RELU);
   net->AddLayer(10, MLP_ACTIVATION_SIGMOID);
 
-  OptimizerCreateInfo optInfo;
-  optInfo.learningRate = 0.05f;
-  optInfo.momentum     = 0.9f;
-  optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
-  net->SetOptimizer(optInfo);
+  configureOptimizer(net);
 
   net->Initialize(MLP_INITIALIZE_HE);
 
@@ -120,11 +137,7 @@ std::shared_ptr<MLP> createMNISTCNNPooling() {
   net->AddLayer(128, MLP_ACTIVATION_RELU);
   net->AddLayer(10, MLP_ACTIVATION_SOFTMAX);
 
-  OptimizerCreateInfo optInfo;
-  optInfo.learningRate = 0.001f;
-  optInfo.momentum     = 0.9f;
-  optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
-  net->SetOptimizer(optInfo);
+  configureOptimizer(net);
 
   net->Initialize(MLP_INITIALIZE_HE);
 
@@ -139,14 +152,9 @@ std::shared_ptr<MLP> createMNISTDeepMLP() {
   net->AddLayer(256, MLP_ACTIVATION_RELU);
   net->AddLayer(128, MLP_ACTIVATION_RELU);
 
-  // Output layer with 10 neurons for 10 classes, using sigmoid or softmax
   net->AddLayer(10, MLP_ACTIVATION_SIGMOID);
 
-  OptimizerCreateInfo optInfo;
-  optInfo.learningRate = 0.005f;
-  optInfo.momentum     = 0.9f;
-  optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
-  net->SetOptimizer(optInfo);
+  configureOptimizer(net);
 
   net->Initialize(MLP_INITIALIZE_HE);
 
@@ -164,11 +172,7 @@ std::shared_ptr<MLP> createMNISTDeepAutoencoder() {
 
   net->AddLayer(28 * 28, MLP_ACTIVATION_SIGMOID);
 
-  OptimizerCreateInfo optInfo;
-  optInfo.learningRate = 0.001f;
-  optInfo.momentum     = 0.9f;
-  optInfo.function     = MLP_OPTIMIZER_SGD_MOMENTUM;
-  net->SetOptimizer(optInfo);
+  configureOptimizer(net);
 
   net->Initialize(MLP_INITIALIZE_HE);
 
@@ -178,7 +182,11 @@ std::shared_ptr<MLP> createMNISTDeepAutoencoder() {
 void train(std::shared_ptr<DataSet> ds, std::shared_ptr<DataSet> test, std::shared_ptr<MLP> mlp) {
 
   std::unique_ptr<MLPTrainer> trainer = std::unique_ptr<MLPTrainer>(mlpTrainerCreate());
-  trainer->SetLossFunction(MLP_LOSS_MSE);
+  if (useCrossEntropy)
+    trainer->SetLossFunction(MLP_LOSS_CROSS_ENTROPY);
+  else
+    trainer->SetLossFunction(MLP_LOSS_MSE);
+
   trainer->SetDataset(ds);
   trainer->SetTestDataset(test);
   trainer->SetNetwork(mlp);
@@ -190,15 +198,26 @@ void train(std::shared_ptr<DataSet> ds, std::shared_ptr<DataSet> test, std::shar
 void mnistclassifier() {
   printf("================[MNIST TEST]========================\n");
 
+
+
   std::shared_ptr<DataSet> ds   = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - training/");
   std::shared_ptr<DataSet> test = createStorageDataSet("assets/MNIST Dataset JPG format/MNIST - JPG - testing/");
 
-  printf("====(CNN + Pooling)===\n");
-  train(ds, test, createMNISTCNNPooling());
-  printf("====(DNN)===\n");
-  train(ds, test, createMNISTDeepMLP());
-  printf("====(CNN)===\n");
-  train(ds, test, createMNISTCNN());
+  auto executeTest = [&]() {
+    printf("====(CNN + Pooling)===\n");
+    train(ds, test, createMNISTCNNPooling());
+    printf("====(DNN)===\n");
+    train(ds, test, createMNISTDeepMLP());
+    /*
+    printf("====(CNN)===\n");
+    train(ds, test, createMNISTCNN()); */
+  };
+
+  printf("Adam OFF: \n");
+  executeTest();
+  printf("Adam ON: \n");
+  useAdam = true;
+  executeTest();
 }
 
 void mnistautoencoder() {
@@ -211,9 +230,9 @@ void mnistautoencoder() {
 }
 
 int main() {
-  tunning_unit_test();
-  xortest();
-  autoencoder();
+  //tunning_unit_test();
+  //xortest();
+  //autoencoder();
   mnistclassifier();
-  mnistautoencoder();
+  //mnistautoencoder();
 }
