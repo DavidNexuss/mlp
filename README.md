@@ -1,4 +1,12 @@
-# MLP library
+# MLP Library
+
+A modular and extensible Multi-Layer Perceptron (MLP) library supporting dense layers, convolutional layers, pooling, and various optimizers — designed for performance and flexibility.
+
+---
+
+## Prerequisites
+
+Before building, ensure that all git submodules are initialized and updated:
 
 ## Check submodules
 
@@ -27,18 +35,19 @@ cd build/release
 ```
 
 ## TODO List
-[X] MLP (Red densa)
-[X] CNN (Anomena)
-[X] Max Pooling (Anomena)
-[ ] Optimizers
-    [X] SGD
-    [X] SGD Momentum
-    [B] AdamA
-    [ ] Newton + BFGS
-[ ] Improvements
-    [B] Leverage dynamic updating
-    [X] Batch normalization
-    [ ] Residual connections
-    [X] L2 Ridge
-[ ] GPU implementation CNN
-[ ] Visualizer
+
+- [x] MLP (Red densa)
+- [x] CNN (Anomena)
+- [x] Max Pooling (Anomena)
+- [ ] Optimizers
+  - [x] SGD
+  - [x] SGD Momentum
+  - [b] AdamA
+  - [ ] Newton + BFGS
+- [ ] Improvements
+  - [b] Leverage dynamic updating
+  - [x] Batch normalization
+  - [ ] Residual connections
+  - [x] L2 Ridge
+- [ ] GPU implementation CNN
+- [ ] Visualizer
