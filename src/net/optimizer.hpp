@@ -77,6 +77,7 @@ struct Adam : public MLPOptimizer {
   float beta1;
   float beta2;
   float lambda;
+  float epsilon;
 
   std::vector<std::vector<float>> mWeights;
   std::vector<std::vector<float>> vWeights;
@@ -87,22 +88,25 @@ struct Adam : public MLPOptimizer {
 
   Adam(OptimizerCreateInfo ci) {
     learningRate = ci.learningRate;
-    beta1        = ci.adam_beta1; // Usually 0.9
-    beta2        = ci.adam_beta2; // Usually 0.999
+    beta1        = ci.adam_beta1;
+    beta2        = ci.adam_beta2;
     lambda       = ci.l2;
+    epsilon      = 1e-8f;
   }
 
   virtual void initialize(OptimizerInputParameters ci) override {
-    mWeights.resize(ci.outputNeurons, std::vector<float>(ci.inputNeurons, 0.0f));
-    vWeights.resize(ci.outputNeurons, std::vector<float>(ci.inputNeurons, 0.0f));
-    mBias.resize(ci.outputNeurons, 0.0f);
-    vBias.resize(ci.outputNeurons, 0.0f);
+    mWeights.assign(ci.outputNeurons, std::vector<float>(ci.inputNeurons, 0.0f));
+    vWeights.assign(ci.outputNeurons, std::vector<float>(ci.inputNeurons, 0.0f));
+    mBias.assign(ci.outputNeurons, 0.0f);
+    vBias.assign(ci.outputNeurons, 0.0f);
     timestep = 0;
   }
 
   virtual void update(OptimizerUpdateParameters layer) override {
-    timestep += 1;
-    float lr_t = learningRate * std::sqrt(1.0f - std::pow(beta2, timestep)) / (1.0f - std::pow(beta1, timestep));
+    timestep++;
+
+    float beta1t = std::pow(beta1, timestep);
+    float beta2t = std::pow(beta2, timestep);
 
     for (int i = 0; i < layer.weights.size(); ++i) {
       for (int j = 0; j < layer.weights[i].size(); ++j) {
@@ -111,22 +115,23 @@ struct Adam : public MLPOptimizer {
         mWeights[i][j] = beta1 * mWeights[i][j] + (1 - beta1) * grad;
         vWeights[i][j] = beta2 * vWeights[i][j] + (1 - beta2) * grad * grad;
 
-        float mHat = mWeights[i][j];
-        float vHat = vWeights[i][j];
-        layer.weights[i][j] -= lr_t * mHat / (std::sqrt(vHat) + epsilon);
+        float mHat = mWeights[i][j] / (1 - beta1t);
+        float vHat = vWeights[i][j] / (1 - beta2t);
+
+        layer.weights[i][j] -= learningRate * mHat / (std::sqrt(vHat) + epsilon);
       }
 
       float gradBias = layer.gradBias[i];
-      mBias[i]       = beta1 * mBias[i] + (1 - beta1) * gradBias;
-      vBias[i]       = beta2 * vBias[i] + (1 - beta2) * gradBias * gradBias;
 
-      float mHatBias = mBias[i];
-      float vHatBias = vBias[i];
-      layer.bias[i] -= lr_t * mHatBias / (std::sqrt(vHatBias) + epsilon);
+      mBias[i] = beta1 * mBias[i] + (1 - beta1) * gradBias;
+      vBias[i] = beta2 * vBias[i] + (1 - beta2) * gradBias * gradBias;
+
+      float mHatBias = mBias[i] / (1 - beta1t);
+      float vHatBias = vBias[i] / (1 - beta2t);
+
+      layer.bias[i] -= learningRate * mHatBias / (std::sqrt(vHatBias) + epsilon);
     }
   }
-
-  virtual ~Adam() {}
 };
 
 

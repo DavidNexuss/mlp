@@ -8,14 +8,19 @@
 #include "loss.hpp"
 #include <memory>
 #include <core/debug.hpp>
+#include "tracy/Tracy.hpp"
 
-#if __linux__
+#define USE_OPENMP 0
+
+#if __linux__ && USE_OPENMP
 #  include <omp.h>
 #else
-#endif
 
 int omp_get_thread_num() { return 0; }
 int omp_get_max_threads() { return 1; }
+
+#endif
+
 
 struct Layer {
   //Layer information
@@ -64,6 +69,8 @@ struct MaxPoolingLayer : public Layer {
   }
 
   void propagate(const std::vector<float>& input, std::vector<float>& output) override {
+
+    ZoneScopedN("Max Pooling Propagate");
     int ow = outputWidth();
     int oh = outputHeight();
     output.resize(inputChannels * ow * oh);
@@ -94,12 +101,14 @@ struct MaxPoolingLayer : public Layer {
                      const std::vector<float>& output,
                      const std::vector<float>& delta,
                      std::vector<float>&       prevDelta) override {
+
+    ZoneScopedN("Max Pooling BackPropagate");
     int ow = outputWidth();
     int oh = outputHeight();
 
     prevDelta.resize(inputChannels * inputWidth * inputHeight, 0.0f);
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for schedule(static)
     for (int c = 0; c < inputChannels; ++c) {
       for (int oy = 0; oy < oh; ++oy) {
         for (int ox = 0; ox < ow; ++ox) {
@@ -125,7 +134,6 @@ struct MaxPoolingLayer : public Layer {
           int outIndex = c * ow * oh + oy * ow + ox;
 
           // Propagate delta only through the max input element
-#pragma omp atomic
           prevDelta[maxIndex] += delta[outIndex];
         }
       }
@@ -171,11 +179,12 @@ struct ConvolutionalLayer : public Layer {
   // Input shape: [inputChannels][H][W] flattened into 1D vector (channel-major)
   // Output shape is computed internally and returned as a flattened 1D vector.
   void propagate(const std::vector<float>& input, std::vector<float>& output) override {
+    ZoneScopedN("Convolution Propagate");
     int ow = outputWidth();
     int oh = outputHeight();
     output.resize(outputChannels * oh * ow, 0.0f);
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for schedule(static)
     for (int oc = 0; oc < outputChannels; ++oc) {
       for (int oy = 0; oy < oh; ++oy) {
         for (int ox = 0; ox < ow; ++ox) {
@@ -210,6 +219,7 @@ struct ConvolutionalLayer : public Layer {
   }
 
   void backpropagate(const std::vector<float>& input, const std::vector<float>& output, const std::vector<float>& delta, std::vector<float>& prevDelta) override {
+    ZoneScopedN("Convolution BackPropagate");
     int iw = inputWidth;
     int ih = inputHeight;
     int ow = outputWidth();
@@ -222,7 +232,7 @@ struct ConvolutionalLayer : public Layer {
 
     prevDelta.resize(input.size(), 0.0f); // Gradient w.r.t. input
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for schedule(static) collapse(3)
     for (int oc = 0; oc < outputChannels; ++oc) {
       for (int oy = 0; oy < oh; ++oy) {
         for (int ox = 0; ox < ow; ++ox) {
@@ -245,12 +255,8 @@ struct ConvolutionalLayer : public Layer {
                   int   inIdx = ic * iw * ih + iy * iw + ix;
                   float inVal = input[inIdx];
 
-                  // Accumulate weight gradient
-#pragma omp atomic
                   gradWeigths[oc][wIndex] += deltaVal * inVal;
 
-                  // Accumulate input gradient
-#pragma omp atomic
                   prevDelta[inIdx] += weights[oc][wIndex] * deltaVal;
                 }
 
@@ -273,6 +279,7 @@ struct DenseLayer : public Layer {
   }
 
   void propagate(const std::vector<float>& input, std::vector<float>& output) override {
+    ZoneScopedN("Dense Propagate");
     output.resize(outputSize());
 
     if (weights.size() > 0 && weights[0].size() != input.size()) {
@@ -299,6 +306,7 @@ struct DenseLayer : public Layer {
     }
   }
   void backpropagate(const std::vector<float>& input, const std::vector<float>& output, const std::vector<float>& delta, std::vector<float>& prevDelta) override {
+    ZoneScopedN("Dense BackPropagate");
     int inSize  = input.size();
     int outSize = output.size();
 
@@ -406,6 +414,7 @@ struct MLPImpl : public MLP {
   }
 
   void Backpropagate(const std::vector<float>& input, const std::vector<float>& target, LossFunction loss) override {
+    ZoneScopedN("BackPropagate");
 
     static std::vector<float> dummyDeltaBuffer;
 
@@ -438,6 +447,7 @@ struct MLPImpl : public MLP {
   }
 
   void TrainStep(const std::vector<float>& input, const std::vector<float>& target, LossFunction loss) override {
+    ZoneScopedN("TrainStep");
     std::vector<float> output;
     Propagate(input, output);
     Backpropagate(input, target, loss);
@@ -513,6 +523,7 @@ struct MLPImpl : public MLP {
   }
 
   void Initialize(InitializationStrategy strategy) override {
+    ZoneScopedN("Initialize");
     for (int i = 0; i < layers.size(); i++) {
       InitializeLayer(strategy, i);
     }

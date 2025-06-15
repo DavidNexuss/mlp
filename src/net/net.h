@@ -167,6 +167,7 @@ struct MLPTrainer {
   virtual void SetNetwork(std::shared_ptr<MLP> mlp)        = 0;
   virtual void SetDataset(std::shared_ptr<DataSet> ds)     = 0;
   virtual void SetTestDataset(std::shared_ptr<DataSet> ds) = 0;
+  virtual void SetResultFile(const std::string& file)      = 0;
   virtual void Train()                                     = 0;
   virtual ~MLPTrainer() {};
 };
