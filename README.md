@@ -36,6 +36,7 @@ cd build/release
 
 ## TODO List
 
+```
 - [x] MLP (Red densa)
 - [x] CNN (Anomena)
 - [x] Max Pooling (Anomena)
@@ -51,3 +52,4 @@ cd build/release
   - [x] L2 Ridge
 - [ ] GPU implementation CNN
 - [ ] Visualizer
+```
