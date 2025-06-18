@@ -89,7 +89,7 @@ struct MLP {
   virtual float ComputeLoss(const vector& predicted, const vector& target, LossFunction loss)                                                                                                                                              = 0;
   virtual void  Backpropagate(const vector& input, const vector& target, LossFunction loss)                                                                                                                                                = 0;
   virtual void  TrainStep(const vector& input, const vector& target, LossFunction loss)                                                                                                                                                    = 0;
-  virtual void  SetOptimizer(const OptimizerCreateInfo ci)                                                                                                                                                                                 = 0;
+  virtual void  SetOptimizer(OptimizerCreateInfo ci)                                                                                                                                                                                       = 0;
   virtual void  InitializeLayer(InitializationStrategy strategy, int layerIndex)                                                                                                                                                           = 0;
   virtual void  Initialize(InitializationStrategy strategy)                                                                                                                                                                                = 0;
   virtual ~MLP() {}

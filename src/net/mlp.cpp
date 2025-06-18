@@ -474,7 +474,9 @@ struct MLPImpl : public MLP {
     }
   }
 
-  void SetOptimizer(const OptimizerCreateInfo ci) override {
+  void SetOptimizer(OptimizerCreateInfo ci) override {
+    if (ci.function == MLP_OPTIMIZER_ADAM)
+      ci.learningRate = ci.learningRate * 0.1f;
     this->optimizerCreateInfo = ci;
   }
 
